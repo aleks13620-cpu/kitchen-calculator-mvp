@@ -1,0 +1,84 @@
+{
+  "facades": [
+    {
+      "id": "mdf_mylo",
+      "name": "МДФ Мыло 3,4,5"
+    },
+    {
+      "id": "mdf_premium",
+      "name": "МДФ 345 Premium"
+    },
+    {
+      "id": "mdf_country",
+      "name": "МДФ 345 Каунтри"
+    },
+    {
+      "id": "mdf_london",
+      "name": "МДФ 345 Лондон"
+    },
+    {
+      "id": "kraska_mat",
+      "name": "Краска МАТ"
+    },
+    {
+      "id": "kraska_gl",
+      "name": "Краска ГЛЯНЕЦ"
+    },
+    {
+      "id": "kraska_mat_fr",
+      "name": "Краска МАТ (ФР)"
+    },
+    {
+      "id": "kraska_gl_fr",
+      "name": "Краска ГЛЯНЕЦ (ФР)"
+    },
+    {
+      "id": "agt",
+      "name": "AGT (1,23)"
+    },
+    {
+      "id": "eterno_pet",
+      "name": "Етерно (ПЭТ)"
+    },
+    {
+      "id": "eterno_etl",
+      "name": "Етерно ETL"
+    },
+    {
+      "id": "eterno_ets",
+      "name": "Етерно ETS"
+    },
+    {
+      "id": "eterno_etm",
+      "name": "Етерно ETM"
+    },
+    {
+      "id": "uf_pfl",
+      "name": "УФ (ПФЛ)"
+    }
+  ],
+  "countertops": [
+    {
+      "id": "ldsp_28",
+      "name": "ЛДСП 28мм",
+      "type": "auto",
+      "pricePerMeter": 0
+    },
+    {
+      "id": "ldsp_40",
+      "name": "ЛДСП 40мм",
+      "type": "auto",
+      "pricePerMeter": 0
+    },
+    {
+      "id": "acrylic",
+      "name": "Акрил",
+      "type": "manual"
+    },
+    {
+      "id": "quartz",
+      "name": "Кварц",
+      "type": "manual"
+    }
+  ]
+}

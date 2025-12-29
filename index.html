@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор кухни MVP</title>
+    <style>
+        /* Reset и базовые стили */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        /* Контейнеры */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .section h2 {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+            color: #007bff;
+        }
+
+        .section h3 {
+            margin: 15px 0 10px;
+            color: #555;
+        }
+
+        /* Формы */
+        form {
+            margin: 15px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        input[type="number"] {
+            width: auto;
+            min-width: 100px;
+        }
+
+        /* Кнопки */
+        button,
+        .btn {
+            padding: 10px 20px;
+            margin: 5px 5px 5px 0;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover,
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        button.secondary {
+            background-color: #6c757d;
+        }
+
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+
+        button.danger {
+            background-color: #dc3545;
+        }
+
+        button.danger:hover {
+            background-color: #c82333;
+        }
+
+        button.success {
+            background-color: #28a745;
+        }
+
+        button.success:hover {
+            background-color: #218838;
+        }
+
+        /* Навигация */
+        #navigation {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        #navigation button {
+            margin-right: 10px;
+        }
+
+        /* Карточки */
+        .card {
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+
+        .card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .card-content {
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        /* Таблицы */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        table th,
+        table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Группы компонентов */
+        .component-group {
+            margin: 20px 0;
+        }
+
+        .component-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .component-row label {
+            flex: 1;
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .component-row input {
+            margin: 0 10px;
+        }
+
+        .component-row .price {
+            min-width: 120px;
+            text-align: right;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        /* Скрытые элементы */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Сообщения */
+        .message {
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Поиск */
+        .search-box {
+            margin: 15px 0;
+        }
+
+        .search-box input {
+            display: inline-block;
+            width: 300px;
+            margin-right: 10px;
+        }
+
+        /* Результаты */
+        .result-summary {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        .result-summary .total {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            margin-top: 10px;
+        }
+
+        /* Чекбоксы */
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        /* Форма входа */
+        #authBlock {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #authBlock h1 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #007bff;
+        }
+
+        #authBlock form {
+            margin: 0;
+        }
+
+        #authBlock button {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Блок авторизации -->
+    <div id="authBlock">
+        <h1>Калькулятор кухни</h1>
+        <form id="loginForm">
+            <label>Логин</label>
+            <input type="text" id="username" required autocomplete="username">
+
+            <label>Пароль</label>
+            <input type="password" id="password" required autocomplete="current-password">
+
+            <button type="submit">Войти</button>
+        </form>
+        <div id="loginMessage"></div>
+    </div>
+
+    <!-- Основное приложение (скрыто до авторизации) -->
+    <div id="app" class="hidden">
+        <div class="container">
+            <!-- Навигация -->
+            <div id="navigation">
+                <button onclick="showSection('clients')">Клиенты</button>
+                <button onclick="showSection('calculator')">Калькулятор</button>
+                <button onclick="showSection('comparison')">Сравнение</button>
+                <button onclick="showSection('history')">История</button>
+                <button id="adminPricesBtn" class="hidden" onclick="showSection('prices')">Цены (Админ)</button>
+                <button id="adminDiscountsBtn" class="hidden" onclick="showSection('discounts')">Скидки (Админ)</button>
+                <button onclick="logout()" class="secondary" style="float: right;">Выход</button>
+                <span id="userInfo" style="float: right; margin: 10px 20px; font-weight: bold;"></span>
+            </div>
+
+            <!-- Блок управления клиентами -->
+            <div id="clientsBlock" class="section hidden">
+                <h2>Управление клиентами</h2>
+
+                <div class="search-box">
+                    <h3>Поиск клиента</h3>
+                    <input type="text" id="searchInput" placeholder="Введите ФИО для поиска">
+                    <button onclick="searchClients()">Найти</button>
+                    <button onclick="showAllClients()" class="secondary">Показать всех</button>
+                </div>
+
+                <div id="clientForm" class="hidden">
+                    <h3>Новый клиент</h3>
+                    <form id="clientFormElement">
+                        <label>Фамилия *</label>
+                        <input type="text" id="clientLastName" required>
+
+                        <label>Имя *</label>
+                        <input type="text" id="clientFirstName" required>
+
+                        <label>Отчество</label>
+                        <input type="text" id="clientMiddleName">
+
+                        <label>Телефон</label>
+                        <input type="tel" id="clientPhone">
+
+                        <label>Email</label>
+                        <input type="email" id="clientEmail">
+
+                        <label>Адрес</label>
+                        <textarea id="clientAddress"></textarea>
+
+                        <button type="submit" class="success">Сохранить клиента</button>
+                        <button type="button" onclick="hideClientForm()" class="secondary">Отмена</button>
+                    </form>
+                </div>
+
+                <button onclick="showClientForm()">Добавить клиента</button>
+
+                <h3>Список клиентов</h3>
+                <div id="clientsList"></div>
+            </div>
+
+            <!-- Блок калькулятора -->
+            <div id="calculatorBlock" class="section hidden">
+                <h2>Калькулятор</h2>
+                <div id="calculatorContent">
+                    <p class="message info">Выберите клиента в разделе "Клиенты" для начала расчета</p>
+                </div>
+            </div>
+
+            <!-- Блок матрицы сравнения -->
+            <div id="comparisonBlock" class="section hidden">
+                <h2>Матрица сравнения вариантов</h2>
+                <div id="comparisonContent"></div>
+            </div>
+
+            <!-- Блок истории расчетов -->
+            <div id="historyBlock" class="section hidden">
+                <h2>История расчетов</h2>
+                <div id="historyContent"></div>
+            </div>
+
+            <!-- Блок управления ценами (только админ) -->
+            <div id="pricesBlock" class="section hidden">
+                <h2>Управление ценами</h2>
+                <div id="pricesContent"></div>
+            </div>
+
+            <!-- Блок управления скидками (только админ) -->
+            <div id="discountsBlock" class="section hidden">
+                <h2>Управление скидками</h2>
+                <div id="discountsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // БЛОК 2: АВТОРИЗАЦИЯ И НАВИГАЦИЯ
+        // ========================================
+
+        // Пользователи системы
+        const USERS = {
+            'admin': {
+                password: 'admin123',
+                role: 'admin',
+                code: 'ADM',
+                name: 'Администратор'
+            },
+            'manager': {
+                password: 'manager123',
+                role: 'manager',
+                code: 'MAN',
+                name: 'Менеджер'
+            }
+        };
+
+        // Глобальные переменные
+        let currentUser = null;
+        let prices = {};
+        let clients = [];
+        let calculations = [];
+        let discounts = [];
+        let currentCalculation = null;
+        let calculationCounter = {};
+
+        // Встроенные данные компонентов
+        const components = [
+            { id: 1, name: "Нижний модуль", unit: "п.м.", category: "Корпуса", isDiscount: false },
+            { id: 2, name: "Верхний модуль 720 мм", unit: "п.м.", category: "Корпуса", isDiscount: false },
+            { id: 3, name: "Пенал (высокий шкаф) 600×2550 мм", unit: "шт.", category: "Корпуса", isDiscount: false },
+            { id: 4, name: "Второй ярус 450 мм (верхний шкаф)", unit: "шт.", category: "Корпуса", isDiscount: false },
+            { id: 5, name: "Нижний угловой модуль 90°", unit: "шт.", category: "Углы", isDiscount: true },
+            { id: 6, name: "Верхний угловой модуль 90°", unit: "шт.", category: "Углы", isDiscount: true },
+            { id: 7, name: "Верхние шкафы 920 мм", unit: "п.м.", category: "Корпуса", isDiscount: false },
+            { id: 8, name: "Ящик 500 мм (шариковые направляющие)", unit: "шт.", category: "Фурнитура", isDiscount: false },
+            { id: 9, name: "Ящик 500 мм (скрытые направляющие)", unit: "шт.", category: "Фурнитура", isDiscount: false },
+            { id: 10, name: "Ящик 500 мм (Blum Tandem)", unit: "шт.", category: "Фурнитура", isDiscount: false },
+            { id: 11, name: "Внутренний ящик 750 мм (с поводком)", unit: "шт.", category: "Фурнитура", isDiscount: false },
+            { id: 12, name: "Профиль Gola L", unit: "шт.", category: "Ручки", isDiscount: false },
+            { id: 13, name: "Профиль Gola C", unit: "шт.", category: "Ручки", isDiscount: false },
+            { id: 14, name: "Профиль Gola (для верхних шкафов)", unit: "шт.", category: "Ручки", isDiscount: false },
+            { id: 15, name: "Стеновая панель 1 м (Скиф)", unit: "п.м.", category: "Декор", isDiscount: false },
+            { id: 16, name: "Подъёмник HF складной (ST)", unit: "шт.", category: "Механизмы", isDiscount: false },
+            { id: 17, name: "Подъёмник HK-S короткий (SQ)", unit: "шт.", category: "Механизмы", isDiscount: false },
+            { id: 18, name: "Подъёмник HK-XS (рычаги) (SE)", unit: "шт.", category: "Механизмы", isDiscount: false },
+            { id: 19, name: "Сушка для посуды", unit: "шт.", category: "Аксессуары", isDiscount: false },
+            { id: 20, name: "Ручки (обычные)", unit: "шт.", category: "Ручки", isDiscount: false },
+            { id: 21, name: "Подъёмник газлифт", unit: "шт.", category: "Механизмы", isDiscount: false },
+            { id: 22, name: "Рамка под стекло", unit: "п.м.", category: "Декор", isDiscount: false },
+            { id: 23, name: "Стекло", unit: "шт.", category: "Декор", isDiscount: false },
+            { id: 24, name: "Подсветка LED", unit: "п.м.", category: "Освещение", isDiscount: false },
+            { id: 25, name: "Евростыковка", unit: "шт.", category: "Аксессуары", isDiscount: false }
+        ];
+
+        // Встроенная конфигурация
+        const config = {
+            facades: [
+                { id: "mdf_mylo", name: "МДФ Мыло 3,4,5" },
+                { id: "mdf_premium", name: "МДФ 345 Premium" },
+                { id: "mdf_country", name: "МДФ 345 Каунтри" },
+                { id: "mdf_london", name: "МДФ 345 Лондон" },
+                { id: "kraska_mat", name: "Краска МАТ" },
+                { id: "kraska_gl", name: "Краска ГЛЯНЕЦ" },
+                { id: "kraska_mat_fr", name: "Краска МАТ (ФР)" },
+                { id: "kraska_gl_fr", name: "Краска ГЛЯНЕЦ (ФР)" },
+                { id: "agt", name: "AGT (1,23)" },
+                { id: "eterno_pet", name: "Етерно (ПЭТ)" },
+                { id: "eterno_etl", name: "Етерно ETL" },
+                { id: "eterno_ets", name: "Етерно ETS" },
+                { id: "eterno_etm", name: "Етерно ETM" },
+                { id: "uf_pfl", name: "УФ (ПФЛ)" }
+            ],
+            countertops: [
+                { id: "ldsp_28", name: "ЛДСП 28мм", type: "auto", pricePerMeter: 0 },
+                { id: "ldsp_40", name: "ЛДСП 40мм", type: "auto", pricePerMeter: 0 },
+                { id: "acrylic", name: "Акрил", type: "manual" },
+                { id: "quartz", name: "Кварц", type: "manual" }
+            ]
+        };
+
+        // ========================================
+        // АВТОРИЗАЦИЯ
+        // ========================================
+
+        // Обработчик формы входа
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            login(username, password);
+        });
+
+        // Функция входа
+        function login(username, password) {
+            const messageDiv = document.getElementById('loginMessage');
+
+            if (USERS[username] && USERS[username].password === password) {
+                currentUser = {
+                    username: username,
+                    role: USERS[username].role,
+                    code: USERS[username].code,
+                    name: USERS[username].name
+                };
+
+                // Сохранение в sessionStorage
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                // Скрыть форму входа
+                document.getElementById('authBlock').classList.add('hidden');
+
+                // Показать приложение
+                document.getElementById('app').classList.remove('hidden');
+
+                // Инициализация приложения
+                initializeApp();
+
+                // Очистить форму
+                document.getElementById('loginForm').reset();
+                messageDiv.innerHTML = '';
+            } else {
+                messageDiv.innerHTML = '<div class="message error">Неверный логин или пароль</div>';
+            }
+        }
+
+        // Функция выхода
+        function logout() {
+            if (confirm('Вы уверены, что хотите выйти?')) {
+                currentUser = null;
+                sessionStorage.removeItem('currentUser');
+                localStorage.removeItem('currentCalculation');
+
+                // Скрыть приложение
+                document.getElementById('app').classList.add('hidden');
+
+                // Показать форму входа
+                document.getElementById('authBlock').classList.remove('hidden');
+
+                // Скрыть все секции
+                hideAllSections();
+            }
+        }
+
+        // Проверка авторизации при загрузке
+        function checkAuth() {
+            const savedUser = sessionStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('authBlock').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                initializeApp();
+            }
+        }
+
+        // ========================================
+        // НАВИГАЦИЯ
+        // ========================================
+
+        // Показать секцию
+        function showSection(sectionName) {
+            // Скрыть все секции
+            hideAllSections();
+
+            // Показать выбранную секцию
+            const sectionMap = {
+                'clients': 'clientsBlock',
+                'calculator': 'calculatorBlock',
+                'comparison': 'comparisonBlock',
+                'history': 'historyBlock',
+                'prices': 'pricesBlock',
+                'discounts': 'discountsBlock'
+            };
+
+            const blockId = sectionMap[sectionName];
+            if (blockId) {
+                const block = document.getElementById(blockId);
+                if (block) {
+                    block.classList.remove('hidden');
+
+                    // Инициализация содержимого секции
+                    initializeSection(sectionName);
+                }
+            }
+        }
+
+        // Скрыть все секции
+        function hideAllSections() {
+            document.getElementById('clientsBlock').classList.add('hidden');
+            document.getElementById('calculatorBlock').classList.add('hidden');
+            document.getElementById('comparisonBlock').classList.add('hidden');
+            document.getElementById('historyBlock').classList.add('hidden');
+            document.getElementById('pricesBlock').classList.add('hidden');
+            document.getElementById('discountsBlock').classList.add('hidden');
+        }
+
+        // Инициализация содержимого секции
+        function initializeSection(sectionName) {
+            switch(sectionName) {
+                case 'clients':
+                    showAllClients();
+                    break;
+                case 'calculator':
+                    showCalculator();
+                    break;
+                case 'comparison':
+                    // Будет реализовано в следующих блоках
+                    break;
+                case 'history':
+                    // Будет реализовано в следующих блоках
+                    break;
+                case 'prices':
+                    showPricesPanel();
+                    break;
+                case 'discounts':
+                    // Будет реализовано в следующих блоках
+                    break;
+            }
+        }
+
+        // ========================================
+        // РАЗГРАНИЧЕНИЕ ПРАВ
+        // ========================================
+
+        // Настройка интерфейса по роли
+        function setupInterface() {
+            if (!currentUser) return;
+
+            // Обновление информации о пользователе
+            document.getElementById('userInfo').textContent =
+                `${currentUser.name} (${currentUser.role})`;
+
+            // Показать/скрыть кнопки админа
+            if (currentUser.role === 'admin') {
+                document.getElementById('adminPricesBtn').classList.remove('hidden');
+                document.getElementById('adminDiscountsBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('adminPricesBtn').classList.add('hidden');
+                document.getElementById('adminDiscountsBtn').classList.add('hidden');
+            }
+
+            // Показать секцию клиентов по умолчанию
+            showSection('clients');
+        }
+
+        // ========================================
+        // ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+        // ========================================
+
+        // Загрузка данных из localStorage
+        function loadUserData() {
+            // Загрузка цен
+            const storedPrices = localStorage.getItem('prices');
+            if (storedPrices) {
+                prices = JSON.parse(storedPrices);
+            }
+
+            // Загрузка клиентов
+            const storedClients = localStorage.getItem('clients');
+            if (storedClients) {
+                clients = JSON.parse(storedClients);
+            }
+
+            // Загрузка расчетов
+            const storedCalculations = localStorage.getItem('calculations');
+            if (storedCalculations) {
+                calculations = JSON.parse(storedCalculations);
+            }
+
+            // Загрузка скидок
+            const storedDiscounts = localStorage.getItem('discounts');
+            if (storedDiscounts) {
+                discounts = JSON.parse(storedDiscounts);
+            }
+
+            // Загрузка счетчика расчетов
+            const storedCounter = localStorage.getItem('calculationCounter');
+            if (storedCounter) {
+                calculationCounter = JSON.parse(storedCounter);
+            }
+
+            console.log('Пользовательские данные загружены:', {
+                clients: clients.length,
+                calculations: calculations.length,
+                discounts: discounts.length
+            });
+        }
+
+        // Инициализация приложения
+        function initializeApp() {
+            // Загрузка пользовательских данных
+            loadUserData();
+
+            // Восстановление расчета
+            restoreCalculation();
+
+            // Настройка интерфейса
+            setupInterface();
+
+            console.log('Приложение инициализировано (25 компонентов, 14 фасадов)');
+        }
+
+        // ========================================
+        // БЛОК 3: УПРАВЛЕНИЕ ЦЕНАМИ (АДМИН)
+        // ========================================
+
+        let currentFacadeForPrices = null;
+
+        // Отображение панели управления ценами
+        function showPricesPanel() {
+            const container = document.getElementById('pricesContent');
+
+            // Выбор фасада
+            let html = '<div style="margin-bottom: 20px;">';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 10px;">Выберите тип фасада для редактирования цен:</label>';
+            html += '<select id="facadeSelector" onchange="loadPricesForFacade(this.value)" style="width: 300px;">';
+            html += '<option value="">-- Выберите фасад --</option>';
+
+            config.facades.forEach(facade => {
+                const selected = currentFacadeForPrices === facade.id ? 'selected' : '';
+                html += `<option value="${facade.id}" ${selected}>${facade.name}</option>`;
+            });
+
+            html += '</select>';
+            html += '</div>';
+
+            // Кнопки управления
+            html += '<div style="margin-bottom: 20px;">';
+            html += '<button onclick="savePrices()" class="success">Сохранить все цены</button>';
+            html += '<button onclick="exportPrices()" class="secondary">Экспорт в JSON</button>';
+            html += '<button onclick="document.getElementById(\'importPricesFile\').click()" class="secondary">Импорт из JSON</button>';
+            html += '<input type="file" id="importPricesFile" accept=".json" style="display:none;" onchange="importPrices(event)">';
+            html += '</div>';
+
+            // Таблица цен
+            html += '<div id="pricesTable"></div>';
+
+            container.innerHTML = html;
+
+            // Если уже выбран фасад, загрузить цены
+            if (currentFacadeForPrices) {
+                loadPricesForFacade(currentFacadeForPrices);
+            }
+        }
+
+        // Загрузка цен для выбранного фасада
+        function loadPricesForFacade(facadeId) {
+            if (!facadeId) {
+                document.getElementById('pricesTable').innerHTML = '';
+                currentFacadeForPrices = null;
+                return;
+            }
+
+            currentFacadeForPrices = facadeId;
+
+            // Инициализация цен для фасада, если их нет
+            if (!prices[facadeId]) {
+                prices[facadeId] = {};
+            }
+
+            // Построение таблицы
+            let html = '<table>';
+            html += '<thead><tr>';
+            html += '<th style="width: 50px;">ID</th>';
+            html += '<th>Компонент</th>';
+            html += '<th style="width: 100px;">Единица</th>';
+            html += '<th style="width: 150px;">Цена за единицу</th>';
+            html += '<th style="width: 120px;">Текущая цена</th>';
+            html += '</tr></thead>';
+            html += '<tbody>';
+
+            components.forEach(component => {
+                const currentPrice = prices[facadeId][component.id] || 0;
+                const priceDisplay = currentPrice !== 0 ? currentPrice.toLocaleString() + ' руб.' : '-';
+                const isDiscount = component.isDiscount;
+
+                html += '<tr>';
+                html += `<td>${component.id}</td>`;
+                html += `<td>${component.name}${isDiscount ? ' <span style="color: red;">(скидка)</span>' : ''}</td>`;
+                html += `<td>${component.unit}</td>`;
+                html += `<td><input type="number" id="price_${component.id}" value="${currentPrice}"
+                         onchange="updatePrice('${facadeId}', ${component.id}, this.value)"
+                         style="width: 130px;" step="0.01"></td>`;
+                html += `<td style="font-weight: bold; color: ${currentPrice < 0 ? 'red' : '#007bff'};">${priceDisplay}</td>`;
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+
+            document.getElementById('pricesTable').innerHTML = html;
+        }
+
+        // Обновление цены компонента
+        function updatePrice(facadeId, componentId, value) {
+            const price = parseFloat(value) || 0;
+
+            if (!prices[facadeId]) {
+                prices[facadeId] = {};
+            }
+
+            prices[facadeId][componentId] = price;
+
+            // Обновить отображение текущей цены
+            const currentPriceCell = document.querySelector(`#price_${componentId}`).closest('tr').cells[4];
+            const priceDisplay = price !== 0 ? price.toLocaleString() + ' руб.' : '-';
+            currentPriceCell.innerHTML = priceDisplay;
+            currentPriceCell.style.color = price < 0 ? 'red' : '#007bff';
+
+            console.log(`Цена обновлена: фасад ${facadeId}, компонент ${componentId}, цена ${price}`);
+        }
+
+        // Сохранение всех цен в localStorage
+        function savePrices() {
+            try {
+                localStorage.setItem('prices', JSON.stringify(prices));
+
+                // Подсчет заполненных цен
+                let totalPrices = 0;
+                Object.keys(prices).forEach(facadeId => {
+                    Object.keys(prices[facadeId]).forEach(componentId => {
+                        if (prices[facadeId][componentId] !== 0) {
+                            totalPrices++;
+                        }
+                    });
+                });
+
+                alert(`Цены успешно сохранены!\n\nВсего цен: ${totalPrices}`);
+                console.log('Цены сохранены в localStorage');
+            } catch (error) {
+                alert('Ошибка при сохранении цен: ' + error.message);
+                console.error('Ошибка сохранения:', error);
+            }
+        }
+
+        // Экспорт цен в JSON файл
+        function exportPrices() {
+            try {
+                const exportData = {
+                    exportDate: new Date().toISOString(),
+                    facades: config.facades.length,
+                    components: components.length,
+                    prices: prices
+                };
+
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+                const fileName = `prices_${new Date().toISOString().split('T')[0]}.json`;
+
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', fileName);
+                linkElement.click();
+
+                console.log('Цены экспортированы в файл:', fileName);
+            } catch (error) {
+                alert('Ошибка при экспорте цен: ' + error.message);
+                console.error('Ошибка экспорта:', error);
+            }
+        }
+
+        // Импорт цен из JSON файла
+        function importPrices(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+
+                    // Валидация данных
+                    if (!importData.prices || typeof importData.prices !== 'object') {
+                        throw new Error('Неверный формат файла: отсутствует объект prices');
+                    }
+
+                    // Подтверждение импорта
+                    const confirm = window.confirm(
+                        `Импортировать цены?\n\n` +
+                        `Дата экспорта: ${importData.exportDate || 'не указана'}\n` +
+                        `Фасадов: ${importData.facades || '?'}\n` +
+                        `Компонентов: ${importData.components || '?'}\n\n` +
+                        `Текущие цены будут перезаписаны!`
+                    );
+
+                    if (confirm) {
+                        prices = importData.prices;
+                        savePrices();
+
+                        // Обновить отображение, если открыт фасад
+                        if (currentFacadeForPrices) {
+                            loadPricesForFacade(currentFacadeForPrices);
+                        }
+
+                        alert('Цены успешно импортированы!');
+                        console.log('Цены импортированы из файла');
+                    }
+                } catch (error) {
+                    alert('Ошибка при импорте цен: ' + error.message);
+                    console.error('Ошибка импорта:', error);
+                }
+            };
+            reader.readAsText(file);
+
+            // Очистить input для возможности повторного выбора того же файла
+            event.target.value = '';
+        }
+
+        // ========================================
+        // БЛОК 5: КАЛЬКУЛЯТОР КОМПОНЕНТОВ
+        // ========================================
+
+        // Класс расчета
+        class Calculation {
+            constructor(clientId, number) {
+                this.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                this.number = number;
+                this.clientId = clientId;
+                this.date = new Date().toISOString();
+                this.components = {};
+                this.selectedFacade = null;
+                this.selectedCountertop = null;
+                this.countertopPrice = 0;
+                this.countertopMeters = 0;
+                this.discount = 0;
+                this.subtotal = 0;
+                this.discountAmount = 0;
+                this.total = 0;
+                this.details = [];
+                this.status = 'draft';
+                this.author = currentUser.username;
+                this.createdAt = new Date().toISOString();
+                this.savedAt = null;
+            }
+        }
+
+        // Генерация номера расчета (ДДММ-NNN-КОД)
+        function generateCalculationNumber() {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const dateKey = `${day}${month}`;
+
+            // Инициализация счетчика для текущего дня
+            if (!calculationCounter[dateKey]) {
+                calculationCounter[dateKey] = 0;
+            }
+
+            calculationCounter[dateKey]++;
+            const counter = String(calculationCounter[dateKey]).padStart(3, '0');
+
+            // Сохранение счетчика
+            localStorage.setItem('calculationCounter', JSON.stringify(calculationCounter));
+
+            return `${dateKey}-${counter}-${currentUser.code}`;
+        }
+
+        // Создание нового расчета
+        function createNewCalculation(clientId) {
+            const number = generateCalculationNumber();
+            currentCalculation = new Calculation(clientId, number);
+            console.log('Новый расчет создан:', currentCalculation.number);
+        }
+
+        // Отображение калькулятора
+        function showCalculator() {
+            const container = document.getElementById('calculatorContent');
+
+            if (!currentCalculation) {
+                container.innerHTML = '<p class="message info">Выберите клиента в разделе "Клиенты" для начала расчета</p>';
+                return;
+            }
+
+            const client = clients.find(c => c.id === currentCalculation.clientId);
+            const clientName = client ? `${client.lastName} ${client.firstName}` : 'Неизвестный';
+
+            let html = '<div class="result-summary" style="background: #e3f2fd; margin-bottom: 20px;">';
+            html += `<h3 style="margin: 0 0 10px 0;">Расчет № ${currentCalculation.number}</h3>`;
+            html += `<div><strong>Клиент:</strong> ${clientName}</div>`;
+            html += `<div><strong>Дата:</strong> ${new Date(currentCalculation.date).toLocaleString('ru-RU')}</div>`;
+            html += '</div>';
+
+            // Выбор фасада
+            html += '<div style="margin-bottom: 20px;">';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">Тип фасада:</label>';
+            html += '<select id="facadeSelect" onchange="selectFacade(this.value)" style="width: 300px;">';
+            html += '<option value="">-- Выберите фасад --</option>';
+
+            config.facades.forEach(facade => {
+                const selected = currentCalculation.selectedFacade === facade.id ? 'selected' : '';
+                html += `<option value="${facade.id}" ${selected}>${facade.name}</option>`;
+            });
+
+            html += '</select>';
+            html += '</div>';
+
+            // Выбор столешницы
+            html += '<div style="margin-bottom: 20px;">';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">Столешница:</label>';
+            html += '<select id="countertopSelect" onchange="selectCountertop(this.value)" style="width: 300px;">';
+            html += '<option value="">-- Выберите столешницу --</option>';
+
+            config.countertops.forEach(countertop => {
+                const selected = currentCalculation.selectedCountertop === countertop.id ? 'selected' : '';
+                html += `<option value="${countertop.id}" ${selected}>${countertop.name}</option>`;
+            });
+
+            html += '</select>';
+
+            // Дополнительные поля для столешницы
+            const selectedCountertop = config.countertops.find(ct => ct.id === currentCalculation.selectedCountertop);
+            if (selectedCountertop) {
+                if (selectedCountertop.type === 'auto') {
+                    html += '<div style="margin-top: 10px;">';
+                    html += '<label>Погонные метры:</label> ';
+                    html += `<input type="number" id="countertopMeters" value="${currentCalculation.countertopMeters || 0}"
+                             onchange="updateCountertopMeters(this.value)" step="0.1" min="0" style="width: 100px;">`;
+                    html += '</div>';
+                } else if (selectedCountertop.type === 'manual') {
+                    html += '<div style="margin-top: 10px;">';
+                    html += '<label>Стоимость (руб.):</label> ';
+                    html += `<input type="number" id="countertopPrice" value="${currentCalculation.countertopPrice || 0}"
+                             onchange="updateCountertopPrice(this.value)" min="0" style="width: 150px;">`;
+                    html += '</div>';
+                }
+            }
+
+            html += '</div>';
+
+            // Компоненты по категориям
+            if (currentCalculation.selectedFacade) {
+                html += '<h3>Компоненты кухни</h3>';
+
+                // Группировка по категориям
+                const grouped = {};
+                components.forEach(comp => {
+                    if (!grouped[comp.category]) {
+                        grouped[comp.category] = [];
+                    }
+                    grouped[comp.category].push(comp);
+                });
+
+                Object.keys(grouped).forEach(category => {
+                    html += `<div class="component-group">`;
+                    html += `<h4 style="margin: 10px 0; color: #007bff;">${category}</h4>`;
+
+                    grouped[category].forEach(comp => {
+                        const quantity = currentCalculation.components[comp.id] || 0;
+                        const step = comp.unit === 'п.м.' ? '0.1' : '1';
+                        const facadePrice = prices[currentCalculation.selectedFacade]?.[comp.id] || 0;
+                        const lineTotal = quantity * facadePrice;
+
+                        html += '<div class="component-row">';
+                        html += `<label>${comp.name} (${comp.unit})</label>`;
+                        html += `<input type="number" value="${quantity}"
+                                 onchange="updateComponent(${comp.id}, this.value)"
+                                 step="${step}" min="0" style="width: 100px;">`;
+                        html += `<span style="min-width: 100px; text-align: right; color: #666;">@ ${facadePrice.toLocaleString()} руб.</span>`;
+                        html += `<span class="price">${lineTotal.toLocaleString()} руб.</span>`;
+                        html += '</div>';
+                    });
+
+                    html += '</div>';
+                });
+
+                // Кнопки управления
+                html += '<div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">';
+                html += '<button onclick="calculateTotal()" class="success">Рассчитать стоимость</button>';
+                html += '<button onclick="clearCalculation()" class="secondary">Очистить расчет</button>';
+                html += '<button onclick="showSection(\'clients\')" class="secondary">Выбрать другого клиента</button>';
+                html += '</div>';
+
+                // Результаты
+                if (currentCalculation.total > 0) {
+                    html += '<div class="result-summary" style="margin-top: 20px;">';
+                    html += `<div><strong>Промежуточный итог:</strong> ${currentCalculation.subtotal.toLocaleString()} руб.</div>`;
+
+                    if (currentCalculation.discount > 0) {
+                        html += `<div style="color: #dc3545;"><strong>Скидка (${currentCalculation.discount}%):</strong> -${currentCalculation.discountAmount.toLocaleString()} руб.</div>`;
+                    }
+
+                    html += `<div class="total">ИТОГО: ${currentCalculation.total.toLocaleString()} руб.</div>`;
+                    html += '<div style="margin-top: 15px;">';
+                    html += '<button onclick="saveCurrentCalculation()" class="success">Сохранить расчет</button>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+            } else {
+                html += '<p class="message info">Выберите тип фасада для отображения компонентов</p>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Выбор фасада
+        function selectFacade(facadeId) {
+            if (!currentCalculation) return;
+            currentCalculation.selectedFacade = facadeId;
+            autoSave();
+            showCalculator();
+        }
+
+        // Выбор столешницы
+        function selectCountertop(countertopId) {
+            if (!currentCalculation) return;
+            currentCalculation.selectedCountertop = countertopId;
+            currentCalculation.countertopPrice = 0;
+            currentCalculation.countertopMeters = 0;
+            autoSave();
+            showCalculator();
+        }
+
+        // Обновление метража столешницы
+        function updateCountertopMeters(value) {
+            if (!currentCalculation) return;
+            currentCalculation.countertopMeters = parseFloat(value) || 0;
+            autoSave();
+        }
+
+        // Обновление цены столешницы (ручной ввод)
+        function updateCountertopPrice(value) {
+            if (!currentCalculation) return;
+            currentCalculation.countertopPrice = parseFloat(value) || 0;
+            autoSave();
+        }
+
+        // Обновление количества компонента
+        function updateComponent(componentId, value) {
+            if (!currentCalculation) return;
+            currentCalculation.components[componentId] = parseFloat(value) || 0;
+            autoSave();
+            showCalculator();
+        }
+
+        // Расчет итоговой стоимости
+        function calculateTotal() {
+            if (!currentCalculation || !currentCalculation.selectedFacade) {
+                alert('Выберите тип фасада');
+                return;
+            }
+
+            let subtotal = 0;
+            const details = [];
+
+            // Расчет компонентов
+            const facadePrices = prices[currentCalculation.selectedFacade] || {};
+
+            components.forEach(comp => {
+                const quantity = currentCalculation.components[comp.id] || 0;
+                if (quantity > 0) {
+                    const price = facadePrices[comp.id] || 0;
+                    const lineTotal = quantity * price;
+
+                    subtotal += lineTotal;
+                    details.push({
+                        component: comp.name,
+                        quantity: quantity,
+                        unit: comp.unit,
+                        price: price,
+                        total: lineTotal
+                    });
+                }
+            });
+
+            // Добавление столешницы
+            if (currentCalculation.selectedCountertop) {
+                const countertop = config.countertops.find(ct => ct.id === currentCalculation.selectedCountertop);
+                if (countertop) {
+                    let countertopTotal = 0;
+
+                    if (countertop.type === 'auto' && currentCalculation.countertopMeters > 0) {
+                        countertopTotal = currentCalculation.countertopMeters * countertop.pricePerMeter;
+                    } else if (countertop.type === 'manual') {
+                        countertopTotal = currentCalculation.countertopPrice || 0;
+                    }
+
+                    if (countertopTotal > 0) {
+                        subtotal += countertopTotal;
+                        details.push({
+                            component: `Столешница: ${countertop.name}`,
+                            quantity: countertop.type === 'auto' ? currentCalculation.countertopMeters : 1,
+                            unit: countertop.type === 'auto' ? 'п.м.' : 'шт.',
+                            price: countertop.type === 'auto' ? countertop.pricePerMeter : countertopTotal,
+                            total: countertopTotal
+                        });
+                    }
+                }
+            }
+
+            // Применение скидки
+            const discountAmount = subtotal * (currentCalculation.discount / 100);
+            const total = subtotal - discountAmount;
+
+            currentCalculation.subtotal = subtotal;
+            currentCalculation.discountAmount = discountAmount;
+            currentCalculation.total = total;
+            currentCalculation.details = details;
+
+            autoSave();
+            showCalculator();
+
+            console.log('Расчет выполнен:', {
+                subtotal: subtotal,
+                discount: currentCalculation.discount,
+                discountAmount: discountAmount,
+                total: total
+            });
+        }
+
+        // Очистка компонентов расчета
+        function clearCalculation() {
+            if (!currentCalculation) return;
+
+            if (confirm('Очистить все компоненты расчета?')) {
+                currentCalculation.components = {};
+                currentCalculation.countertopMeters = 0;
+                currentCalculation.countertopPrice = 0;
+                currentCalculation.subtotal = 0;
+                currentCalculation.discountAmount = 0;
+                currentCalculation.total = 0;
+                currentCalculation.details = [];
+                autoSave();
+                showCalculator();
+            }
+        }
+
+        // Сохранение текущего расчета
+        function saveCurrentCalculation() {
+            if (!currentCalculation) return;
+
+            if (currentCalculation.total === 0) {
+                alert('Выполните расчет перед сохранением');
+                return;
+            }
+
+            currentCalculation.status = 'completed';
+            currentCalculation.savedAt = new Date().toISOString();
+
+            // Добавление к расчетам
+            calculations.push(currentCalculation);
+            localStorage.setItem('calculations', JSON.stringify(calculations));
+
+            // Привязка к клиенту
+            const client = clients.find(c => c.id === currentCalculation.clientId);
+            if (client) {
+                if (!client.calculations.includes(currentCalculation.number)) {
+                    client.calculations.push(currentCalculation.number);
+                    saveClients();
+                }
+            }
+
+            alert(`Расчет ${currentCalculation.number} успешно сохранен!\n\nИтого: ${currentCalculation.total.toLocaleString()} руб.`);
+            console.log('Расчет сохранен:', currentCalculation.number);
+
+            // Очистка текущего расчета
+            currentCalculation = null;
+            localStorage.removeItem('currentCalculation');
+
+            showSection('clients');
+        }
+
+        // Автосохранение текущего расчета
+        function autoSave() {
+            if (currentCalculation) {
+                localStorage.setItem('currentCalculation', JSON.stringify(currentCalculation));
+            }
+        }
+
+        // Восстановление расчета при загрузке
+        function restoreCalculation() {
+            const saved = localStorage.getItem('currentCalculation');
+            if (saved) {
+                currentCalculation = JSON.parse(saved);
+                console.log('Расчет восстановлен из автосохранения');
+            }
+        }
+
+        // ========================================
+        // БЛОК 4: УПРАВЛЕНИЕ КЛИЕНТАМИ
+        // ========================================
+
+        let editingClientId = null;
+
+        // Класс клиента
+        class Client {
+            constructor(lastName, firstName, middleName = '', phone = '', email = '', address = '') {
+                this.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                this.lastName = lastName;
+                this.firstName = firstName;
+                this.middleName = middleName;
+                this.phone = phone;
+                this.email = email;
+                this.address = address;
+                this.createdAt = new Date().toISOString();
+                this.calculations = [];
+            }
+        }
+
+        // Обработчик формы клиента
+        document.getElementById('clientFormElement').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveClientForm();
+        });
+
+        // Сохранение клиента из формы
+        function saveClientForm() {
+            const lastName = document.getElementById('clientLastName').value.trim();
+            const firstName = document.getElementById('clientFirstName').value.trim();
+            const middleName = document.getElementById('clientMiddleName').value.trim();
+            const phone = document.getElementById('clientPhone').value.trim();
+            const email = document.getElementById('clientEmail').value.trim();
+            const address = document.getElementById('clientAddress').value.trim();
+
+            if (!lastName || !firstName) {
+                alert('Заполните обязательные поля: Фамилия и Имя');
+                return;
+            }
+
+            if (editingClientId) {
+                // Редактирование существующего клиента
+                const client = clients.find(c => c.id === editingClientId);
+                if (client) {
+                    client.lastName = lastName;
+                    client.firstName = firstName;
+                    client.middleName = middleName;
+                    client.phone = phone;
+                    client.email = email;
+                    client.address = address;
+                    console.log('Клиент обновлен:', client.id);
+                }
+            } else {
+                // Создание нового клиента
+                const newClient = new Client(lastName, firstName, middleName, phone, email, address);
+                clients.push(newClient);
+                console.log('Новый клиент создан:', newClient.id);
+            }
+
+            saveClients();
+            hideClientForm();
+            showAllClients();
+        }
+
+        // Создание клиента (программно)
+        function createClient(data) {
+            const newClient = new Client(
+                data.lastName,
+                data.firstName,
+                data.middleName || '',
+                data.phone || '',
+                data.email || '',
+                data.address || ''
+            );
+            clients.push(newClient);
+            saveClients();
+            return newClient;
+        }
+
+        // Обновление клиента
+        function updateClient(id, data) {
+            const client = clients.find(c => c.id === id);
+            if (client) {
+                Object.assign(client, data);
+                saveClients();
+                return true;
+            }
+            return false;
+        }
+
+        // Удаление клиента (только для админа)
+        function deleteClient(id) {
+            if (currentUser.role !== 'admin') {
+                alert('Только администратор может удалять клиентов');
+                return;
+            }
+
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+
+            const confirmDelete = confirm(
+                `Удалить клиента?\n\n${client.lastName} ${client.firstName} ${client.middleName}\n\n` +
+                `Количество расчетов: ${client.calculations.length}\n` +
+                `Это действие необратимо!`
+            );
+
+            if (confirmDelete) {
+                const index = clients.findIndex(c => c.id === id);
+                if (index > -1) {
+                    clients.splice(index, 1);
+                    saveClients();
+                    showAllClients();
+                    console.log('Клиент удален:', id);
+                }
+            }
+        }
+
+        // Сохранение клиентов в localStorage
+        function saveClients() {
+            localStorage.setItem('clients', JSON.stringify(clients));
+            console.log('Клиенты сохранены:', clients.length);
+        }
+
+        // Показать форму добавления клиента
+        function showClientForm() {
+            editingClientId = null;
+            document.getElementById('clientForm').classList.remove('hidden');
+            document.getElementById('clientFormElement').reset();
+            document.querySelector('#clientForm h3').textContent = 'Новый клиент';
+        }
+
+        // Показать форму редактирования клиента
+        function editClient(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+
+            editingClientId = id;
+            document.getElementById('clientLastName').value = client.lastName;
+            document.getElementById('clientFirstName').value = client.firstName;
+            document.getElementById('clientMiddleName').value = client.middleName;
+            document.getElementById('clientPhone').value = client.phone;
+            document.getElementById('clientEmail').value = client.email;
+            document.getElementById('clientAddress').value = client.address;
+
+            document.getElementById('clientForm').classList.remove('hidden');
+            document.querySelector('#clientForm h3').textContent = 'Редактирование клиента';
+        }
+
+        // Скрыть форму клиента
+        function hideClientForm() {
+            editingClientId = null;
+            document.getElementById('clientForm').classList.add('hidden');
+            document.getElementById('clientFormElement').reset();
+        }
+
+        // Поиск клиентов по ФИО
+        function searchClients() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+            if (!query) {
+                showAllClients();
+                return;
+            }
+
+            const results = clients.filter(client => {
+                const fullName = `${client.lastName} ${client.firstName} ${client.middleName}`.toLowerCase();
+                return fullName.includes(query);
+            });
+
+            displayClients(results);
+            console.log(`Поиск "${query}": найдено ${results.length} клиентов`);
+        }
+
+        // Отображение всех клиентов
+        function showAllClients() {
+            displayClients(clients);
+        }
+
+        // Отображение списка клиентов
+        function displayClients(clientsList) {
+            const container = document.getElementById('clientsList');
+
+            if (clientsList.length === 0) {
+                container.innerHTML = '<p class="message info">Клиентов не найдено.</p>';
+                return;
+            }
+
+            let html = '';
+            clientsList.forEach(client => {
+                const fullName = `${client.lastName} ${client.firstName} ${client.middleName}`.trim();
+                const createdDate = new Date(client.createdAt).toLocaleDateString('ru-RU');
+
+                html += '<div class="card">';
+                html += `<div class="card-title">${fullName}</div>`;
+                html += '<div class="card-content">';
+
+                if (client.phone) {
+                    html += `<div>📞 ${client.phone}</div>`;
+                }
+                if (client.email) {
+                    html += `<div>📧 ${client.email}</div>`;
+                }
+                if (client.address) {
+                    html += `<div>📍 ${client.address}</div>`;
+                }
+
+                html += `<div style="margin-top: 8px; color: #999; font-size: 12px;">`;
+                html += `Создан: ${createdDate} | Расчетов: ${client.calculations.length}`;
+                html += `</div>`;
+                html += '</div>';
+
+                html += '<div style="margin-top: 10px;">';
+                html += `<button onclick="selectClient('${client.id}')" class="success">Выбрать для расчета</button>`;
+                html += `<button onclick="editClient('${client.id}')" class="secondary">Редактировать</button>`;
+                html += `<button onclick="viewClientCalculations('${client.id}')" class="secondary">История</button>`;
+
+                if (currentUser.role === 'admin') {
+                    html += `<button onclick="deleteClient('${client.id}')" class="danger">Удалить</button>`;
+                }
+
+                html += '</div>';
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Выбор клиента для расчета
+        function selectClient(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if (!client) {
+                alert('Клиент не найден');
+                return;
+            }
+
+            // Создание нового расчета
+            createNewCalculation(clientId);
+
+            // Переход к калькулятору
+            showSection('calculator');
+        }
+
+        // Просмотр истории расчетов клиента
+        function viewClientCalculations(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+
+            // Будет реализовано в следующих блоках
+            alert(`История расчетов для "${client.lastName} ${client.firstName}" будет реализована в следующих блоках`);
+            console.log('Просмотр истории клиента:', clientId);
+        }
+
+        // ========================================
+        // ЗАГЛУШКИ ДЛЯ СЛЕДУЮЩИХ БЛОКОВ
+        // ========================================
+
+        // ========================================
+        // ЗАПУСК ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
+        // ========================================
+
+        window.addEventListener('load', function() {
+            checkAuth();
+            console.log('Калькулятор кухни MVP - Блок 2 готов');
+        });
+    </script>
+</body>
+</html>

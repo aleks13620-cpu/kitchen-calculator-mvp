@@ -1,0 +1,11 @@
+# Excel файлы с исходными данными
+*.xlsx
+
+# Папки с пользовательскими данными
+data/user/
+exports/
+backup/
+
+# OS файлы
+.DS_Store
+Thumbs.db

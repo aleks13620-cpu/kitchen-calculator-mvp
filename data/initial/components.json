@@ -1,0 +1,179 @@
+{
+  "components": [
+    {
+      "id": 1,
+      "name": "Нижний модуль",
+      "unit": "п.м.",
+      "category": "Корпуса",
+      "isDiscount": false
+    },
+    {
+      "id": 2,
+      "name": "Верхний модуль 720 мм",
+      "unit": "п.м.",
+      "category": "Корпуса",
+      "isDiscount": false
+    },
+    {
+      "id": 3,
+      "name": "Пенал (высокий шкаф) 600×2550 мм",
+      "unit": "шт.",
+      "category": "Корпуса",
+      "isDiscount": false
+    },
+    {
+      "id": 4,
+      "name": "Второй ярус 450 мм (верхний шкаф)",
+      "unit": "шт.",
+      "category": "Корпуса",
+      "isDiscount": false
+    },
+    {
+      "id": 5,
+      "name": "Нижний угловой модуль 90°",
+      "unit": "шт.",
+      "category": "Углы",
+      "isDiscount": true
+    },
+    {
+      "id": 6,
+      "name": "Верхний угловой модуль 90°",
+      "unit": "шт.",
+      "category": "Углы",
+      "isDiscount": true
+    },
+    {
+      "id": 7,
+      "name": "Верхние шкафы 920 мм",
+      "unit": "п.м.",
+      "category": "Корпуса",
+      "isDiscount": false
+    },
+    {
+      "id": 8,
+      "name": "Ящик 500 мм (шариковые направляющие)",
+      "unit": "шт.",
+      "category": "Фурнитура",
+      "isDiscount": false
+    },
+    {
+      "id": 9,
+      "name": "Ящик 500 мм (скрытые направляющие)",
+      "unit": "шт.",
+      "category": "Фурнитура",
+      "isDiscount": false
+    },
+    {
+      "id": 10,
+      "name": "Ящик 500 мм (Blum Tandem)",
+      "unit": "шт.",
+      "category": "Фурнитура",
+      "isDiscount": false
+    },
+    {
+      "id": 11,
+      "name": "Внутренний ящик 750 мм (с поводком)",
+      "unit": "шт.",
+      "category": "Фурнитура",
+      "isDiscount": false
+    },
+    {
+      "id": 12,
+      "name": "Профиль Gola L",
+      "unit": "шт.",
+      "category": "Ручки",
+      "isDiscount": false
+    },
+    {
+      "id": 13,
+      "name": "Профиль Gola C",
+      "unit": "шт.",
+      "category": "Ручки",
+      "isDiscount": false
+    },
+    {
+      "id": 14,
+      "name": "Профиль Gola (для верхних шкафов)",
+      "unit": "шт.",
+      "category": "Ручки",
+      "isDiscount": false
+    },
+    {
+      "id": 15,
+      "name": "Стеновая панель 1 м (Скиф)",
+      "unit": "п.м.",
+      "category": "Декор",
+      "isDiscount": false
+    },
+    {
+      "id": 16,
+      "name": "Подъёмник HF складной (ST)",
+      "unit": "шт.",
+      "category": "Механизмы",
+      "isDiscount": false
+    },
+    {
+      "id": 17,
+      "name": "Подъёмник HK-S короткий (SQ)",
+      "unit": "шт.",
+      "category": "Механизмы",
+      "isDiscount": false
+    },
+    {
+      "id": 18,
+      "name": "Подъёмник HK-XS (рычаги) (SE)",
+      "unit": "шт.",
+      "category": "Механизмы",
+      "isDiscount": false
+    },
+    {
+      "id": 19,
+      "name": "Сушка для посуды",
+      "unit": "шт.",
+      "category": "Аксессуары",
+      "isDiscount": false
+    },
+    {
+      "id": 20,
+      "name": "Ручки (обычные)",
+      "unit": "шт.",
+      "category": "Ручки",
+      "isDiscount": false
+    },
+    {
+      "id": 21,
+      "name": "Подъёмник газлифт",
+      "unit": "шт.",
+      "category": "Механизмы",
+      "isDiscount": false
+    },
+    {
+      "id": 22,
+      "name": "Рамка под стекло",
+      "unit": "п.м.",
+      "category": "Декор",
+      "isDiscount": false
+    },
+    {
+      "id": 23,
+      "name": "Стекло",
+      "unit": "шт.",
+      "category": "Декор",
+      "isDiscount": false
+    },
+    {
+      "id": 24,
+      "name": "Подсветка LED",
+      "unit": "п.м.",
+      "category": "Освещение",
+      "isDiscount": false
+    },
+    {
+      "id": 25,
+      "name": "Евростыковка",
+      "unit": "шт.",
+      "category": "Аксессуары",
+      "isDiscount": false
+    }
+  ]
+}
