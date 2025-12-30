@@ -625,7 +625,7 @@
                     showComparison();
                     break;
                 case 'history':
-                    // Будет реализовано в следующих блоках
+                    showHistory();
                     break;
                 case 'prices':
                     showPricesPanel();
@@ -1033,6 +1033,314 @@
             showCalculator();
 
             console.log('Скидка применена к расчету:', discountValue + '%');
+        }
+
+        // ========================================
+        // БЛОК 7: ИСТОРИЯ РАСЧЕТОВ
+        // ========================================
+
+        // Переменные для фильтров
+        let historyFilters = {
+            client: '',
+            dateFrom: '',
+            dateTo: ''
+        };
+
+        // Отображение истории расчетов
+        function showHistory() {
+            const container = document.getElementById('historyContent');
+
+            let html = '';
+
+            // Фильтры
+            html += '<div style="padding: 20px; background: #f8f9fa; border-radius: 4px; margin-bottom: 20px;">';
+            html += '<h3 style="margin: 0 0 15px 0;">Фильтры</h3>';
+            html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+
+            // Фильтр по клиенту
+            html += '<div>';
+            html += '<label style="display: block; margin-bottom: 5px; font-weight: bold;">Клиент:</label>';
+            html += '<select id="filterClient" onchange="applyHistoryFilters()" style="width: 100%;">';
+            html += '<option value="">Все клиенты</option>';
+            clients.forEach(client => {
+                const selected = historyFilters.client === client.id ? 'selected' : '';
+                const fullName = `${client.lastName} ${client.firstName} ${client.middleName}`.trim();
+                html += `<option value="${client.id}" ${selected}>${fullName}</option>`;
+            });
+            html += '</select>';
+            html += '</div>';
+
+            // Фильтр по дате (от)
+            html += '<div>';
+            html += '<label style="display: block; margin-bottom: 5px; font-weight: bold;">Дата от:</label>';
+            html += `<input type="date" id="filterDateFrom" value="${historyFilters.dateFrom}" onchange="applyHistoryFilters()" style="width: 100%;">`;
+            html += '</div>';
+
+            // Фильтр по дате (до)
+            html += '<div>';
+            html += '<label style="display: block; margin-bottom: 5px; font-weight: bold;">Дата до:</label>';
+            html += `<input type="date" id="filterDateTo" value="${historyFilters.dateTo}" onchange="applyHistoryFilters()" style="width: 100%;">`;
+            html += '</div>';
+
+            html += '</div>';
+
+            // Кнопка очистки фильтров
+            html += '<div style="margin-top: 15px;">';
+            html += '<button onclick="clearHistoryFilters()" class="secondary">Очистить фильтры</button>';
+            html += `<span style="margin-left: 15px; color: #666;">Найдено расчетов: <strong id="calculationsCount">0</strong></span>`;
+            html += '</div>';
+            html += '</div>';
+
+            // Список расчетов
+            html += '<div id="calculationsList"></div>';
+
+            container.innerHTML = html;
+
+            // Отобразить расчеты
+            displayCalculations(calculations);
+        }
+
+        // Применение фильтров
+        function applyHistoryFilters() {
+            historyFilters.client = document.getElementById('filterClient').value;
+            historyFilters.dateFrom = document.getElementById('filterDateFrom').value;
+            historyFilters.dateTo = document.getElementById('filterDateTo').value;
+
+            // Фильтрация расчетов (только завершенные)
+            let filtered = calculations.filter(calc => {
+                // Показываем только завершенные расчеты
+                if (calc.status !== 'completed') {
+                    return false;
+                }
+
+                // Фильтр по клиенту
+                if (historyFilters.client && calc.clientId !== historyFilters.client) {
+                    return false;
+                }
+
+                // Фильтр по дате
+                const calcDate = new Date(calc.date).toISOString().split('T')[0];
+                if (historyFilters.dateFrom && calcDate < historyFilters.dateFrom) {
+                    return false;
+                }
+                if (historyFilters.dateTo && calcDate > historyFilters.dateTo) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            displayCalculations(filtered);
+        }
+
+        // Очистка фильтров
+        function clearHistoryFilters() {
+            historyFilters = {
+                client: '',
+                dateFrom: '',
+                dateTo: ''
+            };
+            showHistory();
+        }
+
+        // Отображение списка расчетов
+        function displayCalculations(calcList) {
+            const container = document.getElementById('calculationsList');
+            const countSpan = document.getElementById('calculationsCount');
+
+            if (countSpan) {
+                countSpan.textContent = calcList.length;
+            }
+
+            if (calcList.length === 0) {
+                container.innerHTML = '<p class="message info">Расчетов не найдено.</p>';
+                return;
+            }
+
+            // Сортировка по дате (новые сначала)
+            const sorted = [...calcList].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            let html = '';
+            sorted.forEach(calc => {
+                const client = clients.find(c => c.id === calc.clientId);
+                const clientName = client ? `${client.lastName} ${client.firstName}` : 'Неизвестный клиент';
+                const date = new Date(calc.date).toLocaleString('ru-RU');
+                const statusText = calc.status === 'completed' ? 'Завершен' : 'Черновик';
+                const statusColor = calc.status === 'completed' ? '#28a745' : '#6c757d';
+
+                const facade = config.facades.find(f => f.id === calc.selectedFacade);
+                const facadeName = facade ? facade.name : 'Не выбран';
+
+                html += '<div class="card" style="margin-bottom: 15px;">';
+                html += `<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">`;
+                html += `<div>`;
+                html += `<div class="card-title">Расчет № ${calc.number}</div>`;
+                html += `<div style="color: #666; font-size: 12px; margin-top: 5px;">`;
+                html += `Клиент: <strong>${clientName}</strong> | Дата: ${date}`;
+                html += `</div>`;
+                html += `</div>`;
+                html += `<span style="padding: 4px 12px; border-radius: 12px; background: ${statusColor}; color: white; font-size: 11px; font-weight: bold;">${statusText}</span>`;
+                html += `</div>`;
+
+                html += '<div class="card-content">';
+                html += `<div><strong>Фасад:</strong> ${facadeName}</div>`;
+                if (calc.total > 0) {
+                    html += `<div><strong>Сумма:</strong> ${calc.total.toLocaleString()} руб.`;
+                    if (calc.discount > 0) {
+                        html += ` <span style="color: #dc3545;">(скидка ${calc.discount}%)</span>`;
+                    }
+                    html += `</div>`;
+                }
+                html += '</div>';
+
+                html += '<div style="margin-top: 10px;">';
+                html += `<button onclick="openCalculation('${calc.id}')" class="success">Открыть</button>`;
+                html += `<button onclick="duplicateCalculation('${calc.id}')" class="secondary">Дублировать</button>`;
+                if (currentUser.role === 'admin') {
+                    html += `<button onclick="deleteCalculation('${calc.id}')" class="danger">Удалить</button>`;
+                }
+                html += '</div>';
+
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Открытие расчета для редактирования (создает копию)
+        function openCalculation(calculationId) {
+            const original = calculations.find(c => c.id === calculationId);
+            if (!original) {
+                alert('Расчет не найден');
+                return;
+            }
+
+            // Создать новый расчет на основе оригинала
+            const newNumber = generateCalculationNumber();
+            const copy = new Calculation(original.clientId, newNumber);
+
+            // Скопировать данные
+            copy.components = { ...original.components };
+            copy.selectedFacade = original.selectedFacade;
+            copy.selectedCountertop = original.selectedCountertop;
+            copy.countertopPrice = original.countertopPrice;
+            copy.countertopMeters = original.countertopMeters;
+            copy.discount = original.discount;
+            copy.status = 'draft'; // Новый расчет - черновик
+
+            // Установить как текущий расчет
+            currentCalculation = copy;
+            autoSave();
+
+            alert(`Создана копия расчета для редактирования:\n\nОригинал: ${original.number} (сохранен в истории)\nНовый расчет: ${copy.number}\n\nОткрыт в калькуляторе`);
+
+            // Перейти в калькулятор
+            showSection('calculator');
+
+            console.log('Расчет скопирован для редактирования:', original.number, '→', copy.number);
+        }
+
+        // Дублирование расчета
+        function duplicateCalculation(calculationId) {
+            const original = calculations.find(c => c.id === calculationId);
+            if (!original) {
+                alert('Расчет не найден');
+                return;
+            }
+
+            // Создать новый расчет с данными из оригинала
+            const newNumber = generateCalculationNumber();
+            const duplicate = new Calculation(original.clientId, newNumber);
+
+            // Скопировать данные
+            duplicate.components = { ...original.components };
+            duplicate.selectedFacade = original.selectedFacade;
+            duplicate.selectedCountertop = original.selectedCountertop;
+            duplicate.countertopPrice = original.countertopPrice;
+            duplicate.countertopMeters = original.countertopMeters;
+            duplicate.discount = original.discount;
+            duplicate.status = 'draft'; // Копия всегда черновик
+
+            // Установить как текущий расчет
+            currentCalculation = duplicate;
+            autoSave();
+
+            alert(`Создана копия расчета:\n\nОригинал: ${original.number}\nКопия: ${duplicate.number}\n\nОткрыт в калькуляторе`);
+
+            // Перейти в калькулятор
+            showSection('calculator');
+
+            console.log('Расчет дублирован:', original.number, '→', duplicate.number);
+        }
+
+        // Удаление расчета (только админ)
+        function deleteCalculation(calculationId) {
+            if (currentUser.role !== 'admin') {
+                alert('Только администратор может удалять расчеты');
+                return;
+            }
+
+            const calc = calculations.find(c => c.id === calculationId);
+            if (!calc) return;
+
+            const client = clients.find(c => c.id === calc.clientId);
+            const clientName = client ? `${client.lastName} ${client.firstName}` : 'Неизвестный';
+
+            const confirmDelete = confirm(
+                `Удалить расчет?\n\n` +
+                `Номер: ${calc.number}\n` +
+                `Клиент: ${clientName}\n` +
+                `Сумма: ${calc.total > 0 ? calc.total.toLocaleString() + ' руб.' : 'не рассчитана'}\n\n` +
+                `Это действие необратимо!`
+            );
+
+            if (confirmDelete) {
+                const index = calculations.findIndex(c => c.id === calculationId);
+                if (index > -1) {
+                    calculations.splice(index, 1);
+                    localStorage.setItem('calculations', JSON.stringify(calculations));
+
+                    // Удалить из списка расчетов клиента
+                    if (client) {
+                        const calcIndex = client.calculations.indexOf(calc.number);
+                        if (calcIndex > -1) {
+                            client.calculations.splice(calcIndex, 1);
+                            saveClients();
+                        }
+                    }
+
+                    // Если это текущий расчет - очистить
+                    if (currentCalculation && currentCalculation.id === calculationId) {
+                        currentCalculation = null;
+                        localStorage.removeItem('currentCalculation');
+                    }
+
+                    alert('Расчет удален');
+                    applyHistoryFilters(); // Обновить отображение
+                    console.log('Расчет удален:', calc.number);
+                }
+            }
+        }
+
+        // Просмотр истории расчетов конкретного клиента
+        function viewClientCalculations(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if (!client) {
+                alert('Клиент не найден');
+                return;
+            }
+
+            const fullName = `${client.lastName} ${client.firstName} ${client.middleName}`.trim();
+
+            // Установить фильтр по клиенту
+            historyFilters.client = clientId;
+            historyFilters.dateFrom = '';
+            historyFilters.dateTo = '';
+
+            // Перейти в историю
+            showSection('history');
+
+            console.log('Просмотр истории клиента:', fullName);
         }
 
         // ========================================
@@ -2019,16 +2327,6 @@
 
             // Переход к калькулятору
             showSection('calculator');
-        }
-
-        // Просмотр истории расчетов клиента
-        function viewClientCalculations(clientId) {
-            const client = clients.find(c => c.id === clientId);
-            if (!client) return;
-
-            // Будет реализовано в следующих блоках
-            alert(`История расчетов для "${client.lastName} ${client.firstName}" будет реализована в следующих блоках`);
-            console.log('Просмотр истории клиента:', clientId);
         }
 
         // ========================================
