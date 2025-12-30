@@ -436,6 +436,7 @@
         // Глобальные переменные
         let currentUser = null;
         let prices = {};
+        let countertopPrices = {}; // Цены на столешницы типа "auto"
         let clients = [];
         let calculations = [];
         let discounts = [];
@@ -621,7 +622,7 @@
                     showCalculator();
                     break;
                 case 'comparison':
-                    // Будет реализовано в следующих блоках
+                    showComparison();
                     break;
                 case 'history':
                     // Будет реализовано в следующих блоках
@@ -630,7 +631,7 @@
                     showPricesPanel();
                     break;
                 case 'discounts':
-                    // Будет реализовано в следующих блоках
+                    manageDiscounts();
                     break;
             }
         }
@@ -666,10 +667,16 @@
 
         // Загрузка данных из localStorage
         function loadUserData() {
-            // Загрузка цен
+            // Загрузка цен компонентов
             const storedPrices = localStorage.getItem('prices');
             if (storedPrices) {
                 prices = JSON.parse(storedPrices);
+            }
+
+            // Загрузка цен столешниц
+            const storedCountertopPrices = localStorage.getItem('countertopPrices');
+            if (storedCountertopPrices) {
+                countertopPrices = JSON.parse(storedCountertopPrices);
             }
 
             // Загрузка клиентов
@@ -718,6 +725,317 @@
         }
 
         // ========================================
+        // БЛОК 6: МАТРИЦА СРАВНЕНИЯ И СКИДКИ
+        // ========================================
+
+        let selectedFacadesForComparison = [];
+        let selectedCountertopsForComparison = [];
+
+        // Отображение матрицы сравнения
+        function showComparison() {
+            const container = document.getElementById('comparisonContent');
+
+            let html = '<p class="message info">Выберите фасады и столешницы для сравнения стоимости</p>';
+
+            // Выбор фасадов (до 5)
+            html += '<div style="margin-bottom: 30px;">';
+            html += '<h3>Выберите фасады для сравнения (до 5):</h3>';
+            html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">';
+
+            config.facades.forEach(facade => {
+                const checked = selectedFacadesForComparison.includes(facade.id) ? 'checked' : '';
+                html += `<label style="display: flex; align-items: center;">`;
+                html += `<input type="checkbox" value="${facade.id}" ${checked}
+                         onchange="toggleFacadeForComparison('${facade.id}', this.checked)"
+                         style="margin-right: 8px;">`;
+                html += `${facade.name}`;
+                html += `</label>`;
+            });
+
+            html += '</div></div>';
+
+            // Выбор столешниц
+            html += '<div style="margin-bottom: 30px;">';
+            html += '<h3>Выберите столешницы:</h3>';
+            html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">';
+
+            config.countertops.forEach(countertop => {
+                const checked = selectedCountertopsForComparison.includes(countertop.id) ? 'checked' : '';
+                html += `<label style="display: flex; align-items: center;">`;
+                html += `<input type="checkbox" value="${countertop.id}" ${checked}
+                         onchange="toggleCountertopForComparison('${countertop.id}', this.checked)"
+                         style="margin-right: 8px;">`;
+                html += `${countertop.name}`;
+                html += `</label>`;
+            });
+
+            html += '</div></div>';
+
+            // Кнопки
+            html += '<div style="margin-bottom: 20px;">';
+            html += '<button onclick="buildComparisonTable()" class="success">Построить таблицу сравнения</button>';
+            html += '<button onclick="clearComparison()" class="secondary">Очистить выбор</button>';
+            html += '</div>';
+
+            // Таблица сравнения
+            html += '<div id="comparisonTable"></div>';
+
+            container.innerHTML = html;
+        }
+
+        // Переключение фасада
+        function toggleFacadeForComparison(facadeId, checked) {
+            if (checked) {
+                if (selectedFacadesForComparison.length >= 5) {
+                    alert('Можно выбрать максимум 5 фасадов');
+                    showComparison();
+                    return;
+                }
+                selectedFacadesForComparison.push(facadeId);
+            } else {
+                const index = selectedFacadesForComparison.indexOf(facadeId);
+                if (index > -1) {
+                    selectedFacadesForComparison.splice(index, 1);
+                }
+            }
+        }
+
+        // Переключение столешницы
+        function toggleCountertopForComparison(countertopId, checked) {
+            if (checked) {
+                selectedCountertopsForComparison.push(countertopId);
+            } else {
+                const index = selectedCountertopsForComparison.indexOf(countertopId);
+                if (index > -1) {
+                    selectedCountertopsForComparison.splice(index, 1);
+                }
+            }
+        }
+
+        // Построение таблицы сравнения
+        function buildComparisonTable() {
+            if (selectedFacadesForComparison.length === 0 || selectedCountertopsForComparison.length === 0) {
+                alert('Выберите хотя бы один фасад и одну столешницу');
+                return;
+            }
+
+            if (!currentCalculation) {
+                alert('Создайте расчет, выбрав клиента');
+                return;
+            }
+
+            const tableDiv = document.getElementById('comparisonTable');
+
+            let html = '<h3>Таблица сравнения стоимости</h3>';
+            html += '<div style="overflow-x: auto;">';
+            html += '<table style="min-width: 600px;">';
+            html += '<thead><tr><th>Фасад / Столешница</th>';
+
+            // Заголовки столешниц
+            selectedCountertopsForComparison.forEach(ctId => {
+                const ct = config.countertops.find(c => c.id === ctId);
+                html += `<th>${ct.name}</th>`;
+            });
+
+            html += '</tr></thead><tbody>';
+
+            // Строки фасадов
+            selectedFacadesForComparison.forEach(facadeId => {
+                const facade = config.facades.find(f => f.id === facadeId);
+                html += `<tr><td style="font-weight: bold;">${facade.name}</td>`;
+
+                selectedCountertopsForComparison.forEach(ctId => {
+                    const price = calculateComparisonPrice(facadeId, ctId);
+                    html += `<td style="text-align: right;">`;
+
+                    if (price !== null) {
+                        html += `${price.toLocaleString()} руб.<br>`;
+                        html += `<button onclick="selectCombination('${facadeId}', '${ctId}')"
+                                style="font-size: 11px; padding: 4px 8px; margin-top: 5px;">Выбрать</button>`;
+                    } else {
+                        html += '<span style="color: #999;">Нет цен</span>';
+                    }
+
+                    html += `</td>`;
+                });
+
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+
+            // Легенда
+            html += '<p style="margin-top: 15px; color: #666; font-size: 12px;">';
+            html += 'Стоимость рассчитана на основе текущих компонентов расчета';
+            html += '</p>';
+
+            tableDiv.innerHTML = html;
+        }
+
+        // Расчет цены для комбинации
+        function calculateComparisonPrice(facadeId, countertopId) {
+            if (!currentCalculation) return null;
+
+            const facadePrices = prices[facadeId];
+            if (!facadePrices) return null;
+
+            let total = 0;
+
+            // Расчет компонентов
+            components.forEach(comp => {
+                const quantity = currentCalculation.components[comp.id] || 0;
+                if (quantity > 0) {
+                    const price = facadePrices[comp.id] || 0;
+                    total += quantity * price;
+                }
+            });
+
+            // Добавление столешницы
+            const countertop = config.countertops.find(ct => ct.id === countertopId);
+            if (countertop) {
+                if (countertop.type === 'auto' && currentCalculation.countertopMeters > 0) {
+                    // Использовать цену из countertopPrices, а не из config
+                    const pricePerMeter = countertopPrices[countertop.id] || 0;
+                    total += currentCalculation.countertopMeters * pricePerMeter;
+                } else if (countertop.type === 'manual' && currentCalculation.countertopPrice > 0) {
+                    total += currentCalculation.countertopPrice;
+                }
+            }
+
+            return total > 0 ? total : null;
+        }
+
+        // Выбор комбинации
+        function selectCombination(facadeId, countertopId) {
+            if (!currentCalculation) return;
+
+            currentCalculation.selectedFacade = facadeId;
+            currentCalculation.selectedCountertop = countertopId;
+
+            const facade = config.facades.find(f => f.id === facadeId);
+            const countertop = config.countertops.find(ct => ct.id === countertopId);
+
+            alert(`Выбрана комбинация:\n\nФасад: ${facade.name}\nСтолешница: ${countertop.name}\n\nПерейдите в раздел "Калькулятор" для завершения расчета`);
+
+            autoSave();
+            console.log('Выбрана комбинация:', facadeId, countertopId);
+        }
+
+        // Очистка выбора
+        function clearComparison() {
+            selectedFacadesForComparison = [];
+            selectedCountertopsForComparison = [];
+            showComparison();
+        }
+
+        // ========================================
+        // СИСТЕМА СКИДОК
+        // ========================================
+
+        // Управление скидками (только админ)
+        function manageDiscounts() {
+            if (currentUser.role !== 'admin') {
+                document.getElementById('discountsContent').innerHTML =
+                    '<p class="message error">Доступ запрещен. Только администратор может управлять скидками.</p>';
+                return;
+            }
+
+            const container = document.getElementById('discountsContent');
+
+            let html = '<h3>Доступные скидки</h3>';
+
+            // Форма добавления скидки
+            html += '<div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">';
+            html += '<h4 style="margin: 0 0 10px 0;">Добавить новую скидку</h4>';
+            html += '<div style="display: flex; gap: 10px; align-items: flex-end;">';
+            html += '<div style="flex: 1;">';
+            html += '<label>Название:</label>';
+            html += '<input type="text" id="discountName" placeholder="Например: Постоянный клиент" style="width: 100%;">';
+            html += '</div>';
+            html += '<div style="width: 150px;">';
+            html += '<label>Процент:</label>';
+            html += '<input type="number" id="discountValue" placeholder="5" min="0" max="100" step="1" style="width: 100%;">';
+            html += '</div>';
+            html += '<button onclick="addDiscount()" class="success">Добавить</button>';
+            html += '</div>';
+            html += '</div>';
+
+            // Список скидок
+            if (discounts.length === 0) {
+                html += '<p class="message info">Скидок пока нет. Добавьте первую скидку.</p>';
+            } else {
+                html += '<table>';
+                html += '<thead><tr><th>Название</th><th>Процент</th><th>Действия</th></tr></thead>';
+                html += '<tbody>';
+
+                discounts.forEach((discount, index) => {
+                    html += '<tr>';
+                    html += `<td>${discount.name}</td>`;
+                    html += `<td>${discount.value}%</td>`;
+                    html += `<td><button onclick="removeDiscount(${index})" class="danger">Удалить</button></td>`;
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Добавление скидки
+        function addDiscount() {
+            const name = document.getElementById('discountName').value.trim();
+            const value = parseFloat(document.getElementById('discountValue').value);
+
+            if (!name) {
+                alert('Введите название скидки');
+                return;
+            }
+
+            if (isNaN(value) || value < 0 || value > 100) {
+                alert('Введите процент от 0 до 100');
+                return;
+            }
+
+            discounts.push({ name, value });
+            localStorage.setItem('discounts', JSON.stringify(discounts));
+
+            console.log('Скидка добавлена:', name, value);
+            manageDiscounts();
+        }
+
+        // Удаление скидки
+        function removeDiscount(index) {
+            const discount = discounts[index];
+            if (confirm(`Удалить скидку "${discount.name}" (${discount.value}%)?`)) {
+                discounts.splice(index, 1);
+                localStorage.setItem('discounts', JSON.stringify(discounts));
+                console.log('Скидка удалена');
+                manageDiscounts();
+            }
+        }
+
+        // Применение скидки к текущему расчету
+        function applyDiscountToCalculation(value) {
+            if (!currentCalculation) return;
+
+            const discountValue = parseFloat(value) || 0;
+            currentCalculation.discount = discountValue;
+
+            // Пересчитать итоговую сумму, если расчет уже выполнен
+            if (currentCalculation.subtotal > 0) {
+                const discountAmount = currentCalculation.subtotal * (discountValue / 100);
+                currentCalculation.discountAmount = discountAmount;
+                currentCalculation.total = currentCalculation.subtotal - discountAmount;
+            }
+
+            autoSave();
+            showCalculator();
+
+            console.log('Скидка применена к расчету:', discountValue + '%');
+        }
+
+        // ========================================
         // БЛОК 3: УПРАВЛЕНИЕ ЦЕНАМИ (АДМИН)
         // ========================================
 
@@ -727,9 +1045,42 @@
         function showPricesPanel() {
             const container = document.getElementById('pricesContent');
 
+            let html = '';
+
+            // Цены на столешницы ЛДСП
+            html += '<div style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 4px;">';
+            html += '<h3 style="margin: 0 0 15px 0;">Цены на столешницы ЛДСП (за п.м.)</h3>';
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+
+            // ЛДСП 28мм
+            const ldsp28Price = countertopPrices['ldsp_28'] || 0;
+            html += '<div>';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">ЛДСП 28мм (руб./п.м.):</label>';
+            html += '<input type="number" id="countertop_ldsp_28" value="' + ldsp28Price + '" ';
+            html += 'style="width: 200px;" step="0.01" min="0" placeholder="Введите цену">';
+            html += '<span id="display_ldsp_28" style="margin-left: 10px; color: ' + (ldsp28Price > 0 ? '#007bff' : '#999') + '; font-weight: bold;">';
+            html += ldsp28Price > 0 ? ldsp28Price.toLocaleString() + ' руб./п.м.' : 'Не указано';
+            html += '</span>';
+            html += '</div>';
+
+            // ЛДСП 40мм
+            const ldsp40Price = countertopPrices['ldsp_40'] || 0;
+            html += '<div>';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">ЛДСП 40мм (руб./п.м.):</label>';
+            html += '<input type="number" id="countertop_ldsp_40" value="' + ldsp40Price + '" ';
+            html += 'style="width: 200px;" step="0.01" min="0" placeholder="Введите цену">';
+            html += '<span id="display_ldsp_40" style="margin-left: 10px; color: ' + (ldsp40Price > 0 ? '#007bff' : '#999') + '; font-weight: bold;">';
+            html += ldsp40Price > 0 ? ldsp40Price.toLocaleString() + ' руб./п.м.' : 'Не указано';
+            html += '</span>';
+            html += '</div>';
+
+            html += '</div>';
+            html += '<p style="margin-top: 10px; color: #666; font-size: 12px;">Столешницы "Акрил" и "Кварц" вводятся вручную при расчете.</p>';
+            html += '</div>';
+
             // Выбор фасада
-            let html = '<div style="margin-bottom: 20px;">';
-            html += '<label style="font-weight: bold; display: block; margin-bottom: 10px;">Выберите тип фасада для редактирования цен:</label>';
+            html += '<div style="margin-bottom: 20px;">';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 10px;">Выберите тип фасада для редактирования цен компонентов:</label>';
             html += '<select id="facadeSelector" onchange="loadPricesForFacade(this.value)" style="width: 300px;">';
             html += '<option value="">-- Выберите фасад --</option>';
 
@@ -753,6 +1104,60 @@
             html += '<div id="pricesTable"></div>';
 
             container.innerHTML = html;
+
+            // Программное добавление обработчиков для столешниц
+            console.log('🚀 Добавление event listeners для столешниц...');
+
+            const ldsp28Input = document.getElementById('countertop_ldsp_28');
+            const ldsp40Input = document.getElementById('countertop_ldsp_40');
+
+            if (ldsp28Input) {
+                console.log('✅ Найдено поле countertop_ldsp_28');
+                ldsp28Input.addEventListener('input', function(e) {
+                    console.log('⚡ EVENT: input на ldsp_28, значение:', e.target.value);
+                    console.log('🔍 Проверка функции:', typeof updateCountertopPrice);
+                    try {
+                        updateCountertopPrice('ldsp_28', e.target.value);
+                    } catch (error) {
+                        console.error('💥 ОШИБКА при вызове updateCountertopPrice:', error);
+                    }
+                });
+                ldsp28Input.addEventListener('blur', function(e) {
+                    console.log('⚡ EVENT: blur на ldsp_28, значение:', e.target.value);
+                    try {
+                        updateCountertopPrice('ldsp_28', e.target.value);
+                    } catch (error) {
+                        console.error('💥 ОШИБКА при вызове updateCountertopPrice:', error);
+                    }
+                });
+            } else {
+                console.error('❌ НЕ найдено поле countertop_ldsp_28!');
+            }
+
+            if (ldsp40Input) {
+                console.log('✅ Найдено поле countertop_ldsp_40');
+                ldsp40Input.addEventListener('input', function(e) {
+                    console.log('⚡ EVENT: input на ldsp_40, значение:', e.target.value);
+                    console.log('🔍 Проверка функции:', typeof updateCountertopPrice);
+                    try {
+                        updateCountertopPrice('ldsp_40', e.target.value);
+                    } catch (error) {
+                        console.error('💥 ОШИБКА при вызове updateCountertopPrice:', error);
+                    }
+                });
+                ldsp40Input.addEventListener('blur', function(e) {
+                    console.log('⚡ EVENT: blur на ldsp_40, значение:', e.target.value);
+                    try {
+                        updateCountertopPrice('ldsp_40', e.target.value);
+                    } catch (error) {
+                        console.error('💥 ОШИБКА при вызове updateCountertopPrice:', error);
+                    }
+                });
+            } else {
+                console.error('❌ НЕ найдено поле countertop_ldsp_40!');
+            }
+
+            console.log('✨ Event listeners добавлены!');
 
             // Если уже выбран фасад, загрузить цены
             if (currentFacadeForPrices) {
@@ -826,10 +1231,53 @@
             console.log(`Цена обновлена: фасад ${facadeId}, компонент ${componentId}, цена ${price}`);
         }
 
+        // Обновление цены столешницы в админ панели
+        function updateCountertopPrice(countertopId, value) {
+            console.log('========================================');
+            console.log('🔵 updateCountertopPrice ВЫЗВАНА!');
+            console.log('ID:', countertopId);
+            console.log('Value:', value);
+            console.log('========================================');
+
+            const price = parseFloat(value) || 0;
+            console.log('📊 Цена после parseFloat:', price);
+
+            countertopPrices[countertopId] = price;
+            console.log('💾 countertopPrices после обновления:', JSON.stringify(countertopPrices));
+
+            try {
+                localStorage.setItem('countertopPrices', JSON.stringify(countertopPrices));
+                console.log('✅ Сохранено в localStorage');
+
+                // Проверка сохранения
+                const saved = localStorage.getItem('countertopPrices');
+                console.log('🔍 Проверка localStorage.getItem:', saved);
+            } catch (error) {
+                console.error('❌ Ошибка сохранения в localStorage:', error);
+            }
+
+            // Обновить отображение
+            const displaySpan = document.getElementById('display_' + countertopId);
+            if (displaySpan) {
+                displaySpan.textContent = price > 0 ? price.toLocaleString() + ' руб./п.м.' : 'Не указано';
+                displaySpan.style.color = price > 0 ? '#007bff' : '#999';
+                console.log('🎨 Обновлен span, новый цвет:', displaySpan.style.color);
+            } else {
+                console.warn('⚠️ Элемент display_' + countertopId + ' не найден!');
+            }
+
+            console.log('✨ updateCountertopPrice завершена');
+            console.log('========================================');
+        }
+
+        // Проверка загрузки функции
+        console.log('📌 Функция updateCountertopPrice определена:', typeof updateCountertopPrice);
+
         // Сохранение всех цен в localStorage
         function savePrices() {
             try {
                 localStorage.setItem('prices', JSON.stringify(prices));
+                localStorage.setItem('countertopPrices', JSON.stringify(countertopPrices));
 
                 // Подсчет заполненных цен
                 let totalPrices = 0;
@@ -841,7 +1289,9 @@
                     });
                 });
 
-                alert(`Цены успешно сохранены!\n\nВсего цен: ${totalPrices}`);
+                const countertopCount = Object.keys(countertopPrices).filter(k => countertopPrices[k] > 0).length;
+
+                alert(`Цены успешно сохранены!\n\nЦен компонентов: ${totalPrices}\nЦен столешниц: ${countertopCount}`);
                 console.log('Цены сохранены в localStorage');
             } catch (error) {
                 alert('Ошибка при сохранении цен: ' + error.message);
@@ -856,7 +1306,8 @@
                     exportDate: new Date().toISOString(),
                     facades: config.facades.length,
                     components: components.length,
-                    prices: prices
+                    prices: prices,
+                    countertopPrices: countertopPrices
                 };
 
                 const dataStr = JSON.stringify(exportData, null, 2);
@@ -902,12 +1353,16 @@
 
                     if (confirm) {
                         prices = importData.prices;
+
+                        // Импорт цен столешниц (если есть в файле)
+                        if (importData.countertopPrices) {
+                            countertopPrices = importData.countertopPrices;
+                        }
+
                         savePrices();
 
-                        // Обновить отображение, если открыт фасад
-                        if (currentFacadeForPrices) {
-                            loadPricesForFacade(currentFacadeForPrices);
-                        }
+                        // Обновить отображение
+                        showPricesPanel();
 
                         alert('Цены успешно импортированы!');
                         console.log('Цены импортированы из файла');
@@ -1011,6 +1466,22 @@
             html += '</select>';
             html += '</div>';
 
+            // Выбор скидки
+            if (discounts.length > 0) {
+                html += '<div style="margin-bottom: 20px;">';
+                html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">Скидка:</label>';
+                html += '<select id="discountSelect" onchange="applyDiscountToCalculation(this.value)" style="width: 300px;">';
+                html += '<option value="0">Без скидки</option>';
+
+                discounts.forEach(discount => {
+                    const selected = currentCalculation.discount === discount.value ? 'selected' : '';
+                    html += `<option value="${discount.value}" ${selected}>${discount.name} (-${discount.value}%)</option>`;
+                });
+
+                html += '</select>';
+                html += '</div>';
+            }
+
             // Выбор столешницы
             html += '<div style="margin-bottom: 20px;">';
             html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">Столешница:</label>';
@@ -1037,7 +1508,7 @@
                     html += '<div style="margin-top: 10px;">';
                     html += '<label>Стоимость (руб.):</label> ';
                     html += `<input type="number" id="countertopPrice" value="${currentCalculation.countertopPrice || 0}"
-                             onchange="updateCountertopPrice(this.value)" min="0" style="width: 150px;">`;
+                             onchange="updateCountertopPriceInCalculation(this.value)" min="0" style="width: 150px;">`;
                     html += '</div>';
                 }
             }
@@ -1134,8 +1605,8 @@
             autoSave();
         }
 
-        // Обновление цены столешницы (ручной ввод)
-        function updateCountertopPrice(value) {
+        // Обновление цены столешницы в калькуляторе (ручной ввод для Акрил/Кварц)
+        function updateCountertopPriceInCalculation(value) {
             if (!currentCalculation) return;
             currentCalculation.countertopPrice = parseFloat(value) || 0;
             autoSave();
@@ -1184,11 +1655,24 @@
                 const countertop = config.countertops.find(ct => ct.id === currentCalculation.selectedCountertop);
                 if (countertop) {
                     let countertopTotal = 0;
+                    let countertopPricePerMeter = 0;
+
+                    console.log('=== РАСЧЕТ СТОЛЕШНИЦЫ ===');
+                    console.log('ID столешницы:', countertop.id);
+                    console.log('Тип столешницы:', countertop.type);
+                    console.log('Метров:', currentCalculation.countertopMeters);
 
                     if (countertop.type === 'auto' && currentCalculation.countertopMeters > 0) {
-                        countertopTotal = currentCalculation.countertopMeters * countertop.pricePerMeter;
+                        // Использовать цену из countertopPrices, а не из config
+                        countertopPricePerMeter = countertopPrices[countertop.id] || 0;
+                        countertopTotal = currentCalculation.countertopMeters * countertopPricePerMeter;
+
+                        console.log('Цена за п.м. (из countertopPrices):', countertopPricePerMeter);
+                        console.log('Все цены столешниц:', countertopPrices);
+                        console.log('Итого столешница:', countertopTotal);
                     } else if (countertop.type === 'manual') {
                         countertopTotal = currentCalculation.countertopPrice || 0;
+                        console.log('Ручная стоимость:', countertopTotal);
                     }
 
                     if (countertopTotal > 0) {
@@ -1197,9 +1681,11 @@
                             component: `Столешница: ${countertop.name}`,
                             quantity: countertop.type === 'auto' ? currentCalculation.countertopMeters : 1,
                             unit: countertop.type === 'auto' ? 'п.м.' : 'шт.',
-                            price: countertop.type === 'auto' ? countertop.pricePerMeter : countertopTotal,
+                            price: countertop.type === 'auto' ? countertopPricePerMeter : countertopTotal,
                             total: countertopTotal
                         });
+                    } else {
+                        console.warn('⚠️ Стоимость столешницы = 0! Проверьте цены в админ панели.');
                     }
                 }
             }
