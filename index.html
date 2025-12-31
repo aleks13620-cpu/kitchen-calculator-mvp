@@ -331,6 +331,7 @@
                 <button onclick="showSection('history')">История</button>
                 <button id="adminPricesBtn" class="hidden" onclick="showSection('prices')">Цены (Админ)</button>
                 <button id="adminDiscountsBtn" class="hidden" onclick="showSection('discounts')">Скидки (Админ)</button>
+                <button id="adminUsersBtn" class="hidden" onclick="showSection('users')">Пользователи (Админ)</button>
                 <button onclick="logout()" class="secondary" style="float: right;">Выход</button>
                 <span id="userInfo" style="float: right; margin: 10px 20px; font-weight: bold;"></span>
             </div>
@@ -409,6 +410,43 @@
                 <h2>Управление скидками</h2>
                 <div id="discountsContent"></div>
             </div>
+
+            <!-- Блок управления пользователями (только админ) -->
+            <div id="usersBlock" class="section hidden">
+                <h2>Управление пользователями</h2>
+
+                <!-- Форма добавления/редактирования пользователя -->
+                <div id="userForm" class="hidden">
+                    <h3 id="userFormTitle">Новый пользователь</h3>
+                    <form id="userFormElement">
+                        <label>Логин *</label>
+                        <input type="text" id="userUsername" required>
+
+                        <label>Имя *</label>
+                        <input type="text" id="userName" required>
+
+                        <label>Роль *</label>
+                        <select id="userRole" required>
+                            <option value="manager">Менеджер</option>
+                            <option value="admin">Администратор</option>
+                        </select>
+
+                        <label>Код (3 символа) *</label>
+                        <input type="text" id="userCode" maxlength="3" required style="text-transform: uppercase;">
+
+                        <label id="userPasswordLabel">Пароль *</label>
+                        <input type="password" id="userPassword" required>
+
+                        <button type="submit" class="success">Сохранить</button>
+                        <button type="button" onclick="hideUserForm()" class="secondary">Отмена</button>
+                    </form>
+                </div>
+
+                <button onclick="showAddUserForm()">Добавить пользователя</button>
+
+                <h3>Список пользователей</h3>
+                <div id="usersList"></div>
+            </div>
         </div>
     </div>
 
@@ -435,6 +473,7 @@
 
         // Глобальные переменные
         let currentUser = null;
+        let users = []; // Список пользователей системы (из localStorage)
         let prices = {};
         let countertopPrices = {}; // Цены на столешницы типа "auto"
         let clients = [];
@@ -499,6 +538,145 @@
         };
 
         // ========================================
+        // УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ
+        // ========================================
+
+        // Класс пользователя
+        class User {
+            constructor(username, password, role, code, name) {
+                this.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                this.username = username;
+                this.password = password;
+                this.role = role; // 'admin' или 'manager'
+                this.code = code; // 3-символьный код (ADM, MAN, и т.д.)
+                this.name = name; // Полное имя пользователя
+                this.createdAt = new Date().toISOString();
+                this.updatedAt = new Date().toISOString();
+            }
+        }
+
+        // Инициализация пользователей (миграция из USERS при первом запуске)
+        function initializeUsers() {
+            const stored = localStorage.getItem('users');
+
+            // Если пользователей еще нет в localStorage - создать из константы USERS
+            if (!stored) {
+                const defaultUsers = [];
+
+                // Миграция admin
+                const admin = new User(
+                    'admin',
+                    USERS['admin'].password,
+                    USERS['admin'].role,
+                    USERS['admin'].code,
+                    USERS['admin'].name
+                );
+                defaultUsers.push(admin);
+
+                // Миграция manager
+                const manager = new User(
+                    'manager',
+                    USERS['manager'].password,
+                    USERS['manager'].role,
+                    USERS['manager'].code,
+                    USERS['manager'].name
+                );
+                defaultUsers.push(manager);
+
+                // Сохранить в localStorage
+                localStorage.setItem('users', JSON.stringify(defaultUsers));
+
+                console.log('✓ Пользователи инициализированы из USERS');
+                return defaultUsers;
+            }
+
+            return JSON.parse(stored);
+        }
+
+        // Загрузка пользователей из localStorage
+        function loadUsers() {
+            const stored = localStorage.getItem('users');
+            if (stored) {
+                users = JSON.parse(stored);
+                console.log('Пользователи загружены:', users.length);
+            } else {
+                // Если нет - инициализировать
+                users = initializeUsers();
+            }
+        }
+
+        // Сохранение пользователей в localStorage
+        function saveUsers() {
+            localStorage.setItem('users', JSON.stringify(users));
+            console.log('Пользователи сохранены:', users.length);
+        }
+
+        // Отображение панели управления пользователями
+        function showUsersPanel() {
+            if (currentUser.role !== 'admin') {
+                alert('Доступ запрещен. Только администратор может управлять пользователями.');
+                return;
+            }
+
+            let html = '<table>';
+            html += '<thead><tr>';
+            html += '<th>Логин</th>';
+            html += '<th>Имя</th>';
+            html += '<th>Роль</th>';
+            html += '<th>Код</th>';
+            html += '<th>Создан</th>';
+            html += '<th>Действия</th>';
+            html += '</tr></thead><tbody>';
+
+            users.forEach(user => {
+                const createdDate = new Date(user.createdAt).toLocaleDateString('ru-RU');
+                const roleName = user.role === 'admin' ? 'Администратор' : 'Менеджер';
+
+                html += '<tr>';
+                html += `<td>${user.username}</td>`;
+                html += `<td>${user.name}</td>`;
+                html += `<td>${roleName}</td>`;
+                html += `<td>${user.code}</td>`;
+                html += `<td>${createdDate}</td>`;
+                html += '<td>';
+                html += `<button onclick="editUser('${user.id}')" class="secondary">Редактировать</button> `;
+                html += `<button onclick="showChangePasswordDialog('${user.id}')" class="secondary">Изменить пароль</button> `;
+                html += `<button onclick="deleteUser('${user.id}')" class="danger">Удалить</button>`;
+                html += '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('usersList').innerHTML = html;
+        }
+
+        // Показать форму добавления пользователя
+        function showAddUserForm() {
+            document.getElementById('userFormTitle').textContent = 'Новый пользователь';
+            document.getElementById('userFormElement').reset();
+            document.getElementById('userUsername').readOnly = false;
+            document.getElementById('userPasswordLabel').textContent = 'Пароль *';
+            document.getElementById('userPassword').required = true;
+            document.getElementById('userPassword').parentElement.style.display = '';
+            document.getElementById('userForm').classList.remove('hidden');
+
+            // Обработчик для автогенерации кода из имени
+            document.getElementById('userName').addEventListener('input', function() {
+                const name = this.value.trim();
+                if (name.length >= 3) {
+                    const code = name.substring(0, 3).toUpperCase();
+                    document.getElementById('userCode').value = code;
+                }
+            });
+        }
+
+        // Скрыть форму пользователя
+        function hideUserForm() {
+            document.getElementById('userForm').classList.add('hidden');
+            document.getElementById('userFormElement').reset();
+        }
+
+        // ========================================
         // АВТОРИЗАЦИЯ
         // ========================================
 
@@ -514,12 +692,16 @@
         function login(username, password) {
             const messageDiv = document.getElementById('loginMessage');
 
-            if (USERS[username] && USERS[username].password === password) {
+            // Найти пользователя в массиве users
+            const user = users.find(u => u.username === username);
+
+            if (user && user.password === password) {
                 currentUser = {
-                    username: username,
-                    role: USERS[username].role,
-                    code: USERS[username].code,
-                    name: USERS[username].name
+                    id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    code: user.code,
+                    name: user.name
                 };
 
                 // Сохранение в sessionStorage
@@ -587,7 +769,8 @@
                 'comparison': 'comparisonBlock',
                 'history': 'historyBlock',
                 'prices': 'pricesBlock',
-                'discounts': 'discountsBlock'
+                'discounts': 'discountsBlock',
+                'users': 'usersBlock'
             };
 
             const blockId = sectionMap[sectionName];
@@ -610,6 +793,7 @@
             document.getElementById('historyBlock').classList.add('hidden');
             document.getElementById('pricesBlock').classList.add('hidden');
             document.getElementById('discountsBlock').classList.add('hidden');
+            document.getElementById('usersBlock').classList.add('hidden');
         }
 
         // Инициализация содержимого секции
@@ -633,6 +817,9 @@
                 case 'discounts':
                     manageDiscounts();
                     break;
+                case 'users':
+                    showUsersPanel();
+                    break;
             }
         }
 
@@ -652,9 +839,11 @@
             if (currentUser.role === 'admin') {
                 document.getElementById('adminPricesBtn').classList.remove('hidden');
                 document.getElementById('adminDiscountsBtn').classList.remove('hidden');
+                document.getElementById('adminUsersBtn').classList.remove('hidden');
             } else {
                 document.getElementById('adminPricesBtn').classList.add('hidden');
                 document.getElementById('adminDiscountsBtn').classList.add('hidden');
+                document.getElementById('adminUsersBtn').classList.add('hidden');
             }
 
             // Показать секцию клиентов по умолчанию
@@ -667,6 +856,9 @@
 
         // Загрузка данных из localStorage
         function loadUserData() {
+            // Загрузка пользователей
+            loadUsers();
+
             // Загрузка цен компонентов
             const storedPrices = localStorage.getItem('prices');
             if (storedPrices) {
