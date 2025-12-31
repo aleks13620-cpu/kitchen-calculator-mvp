@@ -1196,6 +1196,7 @@
                 html += '<div style="margin-top: 10px;">';
                 html += `<button onclick="openCalculation('${calc.id}')" class="success">Открыть</button>`;
                 html += `<button onclick="duplicateCalculation('${calc.id}')" class="secondary">Дублировать</button>`;
+                html += `<button onclick="exportCalculationToExcel('${calc.id}')" class="secondary">Экспорт КП (Excel)</button>`;
                 if (currentUser.role === 'admin') {
                     html += `<button onclick="deleteCalculation('${calc.id}')" class="danger">Удалить</button>`;
                 }
@@ -2270,6 +2271,303 @@
                 return '';
             }
         });
+
+        // ========================================
+        // БЛОК 10: ЭКСПОРТ РАСЧЕТА В EXCEL
+        // ========================================
+
+        // Экспорт расчета в Excel (XLS формат)
+        function exportCalculationToExcel(calculationId) {
+            const calc = calculations.find(c => c.id === calculationId);
+            if (!calc) {
+                alert('Расчет не найден');
+                return;
+            }
+
+            const client = clients.find(c => c.id === calc.clientId);
+            if (!client) {
+                alert('Клиент не найден');
+                return;
+            }
+
+            try {
+                // Формирование HTML данных
+                const htmlContent = generateCalculationHTML(calc, client);
+
+                // Создание имени файла: KP_<номер>_<YYYY-MM-DD>.xls
+                const calcDate = new Date(calc.date);
+                const year = calcDate.getFullYear();
+                const month = String(calcDate.getMonth() + 1).padStart(2, '0');
+                const day = String(calcDate.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                const fileName = `KP_${calc.number}_${dateStr}.xls`;
+
+                // Скачивание файла
+                downloadXLS(htmlContent, fileName);
+
+                console.log('Расчет экспортирован:', fileName);
+            } catch (error) {
+                alert('Ошибка при экспорте расчета: ' + error.message);
+                console.error('Ошибка экспорта:', error);
+            }
+        }
+
+        // Генерация CSV данных из расчета
+        function generateCalculationCSV(calc, client) {
+            let csv = [];
+
+            // Шапка
+            csv.push(['КАЛЬКУЛЯТОР КУХНИ']);
+            csv.push(['Коммерческое предложение']);
+            csv.push([]);
+            csv.push(['Дата:', new Date(calc.date).toLocaleDateString('ru-RU')]);
+            csv.push(['Номер расчета:', calc.number]);
+            csv.push([]);
+
+            // Данные клиента
+            csv.push(['ДАННЫЕ КЛИЕНТА']);
+            csv.push(['ФИО:', `${client.lastName} ${client.firstName} ${client.middleName}`.trim()]);
+            if (client.phone) csv.push(['Телефон:', client.phone]);
+            if (client.email) csv.push(['Email:', client.email]);
+            if (client.address) csv.push(['Адрес:', client.address]);
+            csv.push([]);
+
+            // Фасад и столешница
+            const facade = config.facades.find(f => f.id === calc.selectedFacade);
+            if (facade) {
+                csv.push(['Тип фасада:', facade.name]);
+            }
+
+            if (calc.selectedCountertop) {
+                const countertop = config.countertops.find(ct => ct.id === calc.selectedCountertop);
+                if (countertop) {
+                    csv.push(['Столешница:', countertop.name]);
+                    if (calc.countertopMeters > 0) {
+                        csv.push(['Метров столешницы:', calc.countertopMeters]);
+                    }
+                }
+            }
+            csv.push([]);
+
+            // Таблица компонентов
+            csv.push(['СОСТАВ КУХНИ']);
+            csv.push(['Наименование', 'Количество', 'Ед.изм.', 'Цена за ед.', 'Сумма']);
+
+            // Данные из details (включает компоненты и столешницу)
+            if (calc.details && calc.details.length > 0) {
+                calc.details.forEach(item => {
+                    csv.push([
+                        item.component,
+                        item.quantity,
+                        item.unit,
+                        item.price,
+                        item.total
+                    ]);
+                });
+            }
+
+            csv.push([]);
+
+            // Промежуточный итог
+            csv.push(['Промежуточный итог:', '', '', '', calc.subtotal]);
+
+            // Скидка
+            if (calc.discount > 0) {
+                csv.push([`Скидка (${calc.discount}%):`, '', '', '', `-${calc.discountAmount}`]);
+            }
+
+            // Дополнительные услуги
+            if (calc.delivery > 0 || calc.lifting > 0 || calc.installation > 0) {
+                csv.push([]);
+                csv.push(['ДОПОЛНИТЕЛЬНЫЕ УСЛУГИ']);
+
+                if (calc.delivery > 0) {
+                    csv.push(['Доставка:', '', '', '', calc.delivery]);
+                }
+                if (calc.lifting > 0) {
+                    csv.push(['Подъем на этаж:', '', '', '', calc.lifting]);
+                }
+                if (calc.installation > 0) {
+                    csv.push([`Установка (${calc.installation}%):`, '', '', '', calc.installationAmount]);
+                }
+            }
+
+            csv.push([]);
+
+            // Итого
+            csv.push(['ИТОГО К ОПЛАТЕ:', '', '', '', calc.total]);
+
+            csv.push([]);
+            csv.push(['Автор:', calc.author]);
+            csv.push(['Дата сохранения:', calc.savedAt ? new Date(calc.savedAt).toLocaleString('ru-RU') : '-']);
+
+            return csv;
+        }
+
+        // Скачивание CSV файла
+        function downloadCSV(csvData, fileName) {
+            // Конвертация массива в CSV строку
+            const csvContent = csvData.map(row => {
+                return row.map(cell => {
+                    // Экранирование кавычек и обертка в кавычки если есть запятые
+                    const cellStr = String(cell || '');
+                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                        return '"' + cellStr.replace(/"/g, '""') + '"';
+                    }
+                    return cellStr;
+                }).join(',');
+            }).join('\n');
+
+            // Добавление BOM для корректного отображения кириллицы в Excel
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+            // Создание ссылки для скачивания
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        // Форматирование денег (пробелы + "руб.")
+        function formatMoney(value) {
+            const num = parseFloat(value) || 0;
+            return num.toLocaleString('ru-RU') + ' руб.';
+        }
+
+        // Генерация HTML для экспорта в XLS
+        function generateCalculationHTML(calc, client) {
+            let html = '<html><head><meta charset="UTF-8">';
+
+            // Встроенные стили (MVP уровень)
+            html += '<style>';
+            html += 'body { font-family: Arial, sans-serif; padding: 20px; }';
+            html += 'table { border-collapse: collapse; margin: 10px 0; }';
+            html += 'th, td { border: 1px solid black; padding: 5px; }';
+            html += 'td { text-align: left; }';
+            html += 'td:last-child { text-align: right; }';
+            html += '.discount { font-weight: bold; border: 2px solid black; padding: 10px; margin: 10px 0; display: inline-block; }';
+            html += '.header { font-weight: bold; font-style: italic; font-size: 18px; margin-bottom: 20px; }';
+            html += '</style>';
+            html += '</head><body>';
+
+            // 🧾 Заголовок
+            const calcDate = new Date(calc.date).toLocaleDateString('ru-RU');
+            html += '<div class="header">';
+            html += `📋 КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ №${calc.number} от ${calcDate}`;
+            html += '</div>';
+
+            // 👤 Данные клиента
+            html += '<h3>Данные клиента</h3>';
+            html += '<table>';
+
+            const fullName = `${client.lastName} ${client.firstName} ${client.middleName}`.trim();
+            html += `<tr><td>ФИО</td><td>${fullName}</td></tr>`;
+
+            if (client.phone) {
+                html += `<tr><td>Телефон</td><td>${client.phone}</td></tr>`;
+            }
+
+            if (client.email) {
+                html += `<tr><td>Email</td><td>${client.email}</td></tr>`;
+            }
+
+            html += '</table>';
+
+            // 🎁 Скидка (если есть)
+            if (calc.discount > 0 && calc.discountAmount > 0) {
+                html += '<div class="discount">';
+                html += `Скидка ${calc.discount}%: ${formatMoney(calc.discountAmount)}`;
+                html += '</div>';
+            }
+
+            // ✅ Итого
+            html += '<h3>Итого</h3>';
+            html += '<table>';
+
+            // Стоимость кухни
+            html += '<tr><td>Стоимость кухни</td><td>' + formatMoney(calc.subtotal) + '</td></tr>';
+
+            // Дополнительные услуги (общая сумма одной строкой)
+            const totalServices = (calc.delivery || 0) + (calc.lifting || 0) + (calc.installationAmount || 0);
+            if (totalServices > 0) {
+                html += '<tr><td>Дополнительные услуги</td><td>' + formatMoney(totalServices) + '</td></tr>';
+            }
+
+            // Итого к оплате
+            html += '<tr><td><strong>ИТОГО К ОПЛАТЕ</strong></td><td><strong>' + formatMoney(calc.total) + '</strong></td></tr>';
+
+            html += '</table>';
+
+            // 🧮 Варианты (матрица сравнения)
+            // Проверяем: есть ли выбранные варианты и их >= 2
+            const variantsCount = selectedFacadesForComparison.length * selectedCountertopsForComparison.length;
+            if (variantsCount >= 2) {
+                html += '<h3>Сравнение вариантов</h3>';
+                html += '<table>';
+                html += '<thead><tr><th>Фасад / Столешница</th>';
+
+                // Заголовки столешниц
+                selectedCountertopsForComparison.forEach(ctId => {
+                    const ct = config.countertops.find(c => c.id === ctId);
+                    html += `<th>${ct.name}</th>`;
+                });
+
+                html += '</tr></thead><tbody>';
+
+                // Строки фасадов
+                selectedFacadesForComparison.forEach(facadeId => {
+                    const facade = config.facades.find(f => f.id === facadeId);
+                    html += `<tr><td><strong>${facade.name}</strong></td>`;
+
+                    selectedCountertopsForComparison.forEach(ctId => {
+                        const price = calculateComparisonPrice(facadeId, ctId);
+                        html += '<td>';
+                        if (price !== null) {
+                            html += formatMoney(price);
+                        } else {
+                            html += '-';
+                        }
+                        html += '</td>';
+                    });
+
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+            }
+
+            html += '</body></html>';
+            return html;
+        }
+
+        // Скачивание XLS файла
+        function downloadXLS(htmlContent, fileName) {
+            // Добавление BOM для корректного отображения кириллицы
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + htmlContent], {
+                type: 'application/vnd.ms-excel;charset=utf-8;'
+            });
+
+            // Создание ссылки для скачивания
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        }
 
         // ========================================
 
