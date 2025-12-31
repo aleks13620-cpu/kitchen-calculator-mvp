@@ -1234,6 +1234,7 @@
 
             // Установить как текущий расчет
             currentCalculation = copy;
+            startAutoSaveTimer(); // Запустить таймер автосохранения
             autoSave();
 
             alert(`Создана копия расчета для редактирования:\n\nОригинал: ${original.number} (сохранен в истории)\nНовый расчет: ${copy.number}\n\nОткрыт в калькуляторе`);
@@ -1271,6 +1272,7 @@
 
             // Установить как текущий расчет
             currentCalculation = duplicate;
+            startAutoSaveTimer(); // Запустить таймер автосохранения
             autoSave();
 
             alert(`Создана копия расчета:\n\nОригинал: ${original.number}\nКопия: ${duplicate.number}\n\nОткрыт в калькуляторе`);
@@ -1752,6 +1754,7 @@
         function createNewCalculation(clientId) {
             const number = generateCalculationNumber();
             currentCalculation = new Calculation(clientId, number);
+            startAutoSaveTimer(); // Запустить таймер автосохранения
             console.log('Новый расчет создан:', currentCalculation.number);
         }
 
@@ -2161,28 +2164,114 @@
             alert(`Расчет ${currentCalculation.number} успешно сохранен!\n\nИтого: ${currentCalculation.total.toLocaleString()} руб.`);
             console.log('Расчет сохранен:', currentCalculation.number);
 
-            // Очистка текущего расчета
+            // Очистка текущего расчета и автосохранения
             currentCalculation = null;
-            localStorage.removeItem('currentCalculation');
+            clearAutoSave();
+            stopAutoSaveTimer();
 
             showSection('clients');
         }
+
+        // ========================================
+        // БЛОК 9: АВТОСОХРАНЕНИЕ И ВОССТАНОВЛЕНИЕ
+        // ========================================
+
+        // Переменная для хранения интервала автосохранения
+        let autoSaveInterval = null;
 
         // Автосохранение текущего расчета
         function autoSave() {
             if (currentCalculation) {
                 localStorage.setItem('currentCalculation', JSON.stringify(currentCalculation));
+                console.log('✓ Автосохранение выполнено:', new Date().toLocaleTimeString());
             }
+        }
+
+        // Запуск таймера автосохранения (каждые 5 минут)
+        function startAutoSaveTimer() {
+            // Очистить предыдущий интервал если есть
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+            }
+
+            // Запустить новый интервал (5 минут = 300000 мс)
+            autoSaveInterval = setInterval(() => {
+                autoSave();
+            }, 300000); // 5 минут
+
+            console.log('⏱️ Таймер автосохранения запущен (каждые 5 минут)');
+        }
+
+        // Остановка таймера автосохранения
+        function stopAutoSaveTimer() {
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+                autoSaveInterval = null;
+                console.log('⏱️ Таймер автосохранения остановлен');
+            }
+        }
+
+        // Очистка автосохранения
+        function clearAutoSave() {
+            localStorage.removeItem('currentCalculation');
+            console.log('🗑️ Автосохранение очищено');
         }
 
         // Восстановление расчета при загрузке
         function restoreCalculation() {
             const saved = localStorage.getItem('currentCalculation');
             if (saved) {
-                currentCalculation = JSON.parse(saved);
-                console.log('Расчет восстановлен из автосохранения');
+                try {
+                    const savedCalc = JSON.parse(saved);
+                    const client = clients.find(c => c.id === savedCalc.clientId);
+
+                    if (client) {
+                        const clientName = `${client.lastName} ${client.firstName}`;
+                        const savedDate = new Date(savedCalc.date).toLocaleString('ru-RU');
+
+                        const restore = confirm(
+                            `Найден незавершенный расчет:\n\n` +
+                            `Номер: ${savedCalc.number}\n` +
+                            `Клиент: ${clientName}\n` +
+                            `Дата создания: ${savedDate}\n` +
+                            `Сумма: ${savedCalc.total > 0 ? savedCalc.total.toLocaleString() + ' руб.' : 'не рассчитана'}\n\n` +
+                            `Продолжить работу с этим расчетом?`
+                        );
+
+                        if (restore) {
+                            currentCalculation = savedCalc;
+                            startAutoSaveTimer(); // Запустить таймер автосохранения
+                            console.log('✓ Расчет восстановлен из автосохранения');
+                            showSection('calculator');
+                            return true;
+                        } else {
+                            clearAutoSave();
+                            console.log('✗ Пользователь отказался от восстановления');
+                        }
+                    } else {
+                        console.warn('⚠️ Клиент из автосохранения не найден');
+                        clearAutoSave();
+                    }
+                } catch (error) {
+                    console.error('Ошибка восстановления расчета:', error);
+                    clearAutoSave();
+                }
             }
+            return false;
         }
+
+        // Защита от потери данных при закрытии вкладки
+        window.addEventListener('beforeunload', function(e) {
+            // Показываем предупреждение только если есть незавершенный расчет
+            if (currentCalculation && currentCalculation.status === 'draft') {
+                // Современные браузеры игнорируют custom message, но требуют returnValue
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        });
+
+        // ========================================
 
         // ========================================
         // БЛОК 4: УПРАВЛЕНИЕ КЛИЕНТАМИ
