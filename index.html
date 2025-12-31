@@ -1226,6 +1226,10 @@
             copy.countertopPrice = original.countertopPrice;
             copy.countertopMeters = original.countertopMeters;
             copy.discount = original.discount;
+            // Копировать дополнительные услуги
+            copy.delivery = original.delivery || 0;
+            copy.lifting = original.lifting || 0;
+            copy.installation = original.installation || 0;
             copy.status = 'draft'; // Новый расчет - черновик
 
             // Установить как текущий расчет
@@ -1259,6 +1263,10 @@
             duplicate.countertopPrice = original.countertopPrice;
             duplicate.countertopMeters = original.countertopMeters;
             duplicate.discount = original.discount;
+            // Копировать дополнительные услуги
+            duplicate.delivery = original.delivery || 0;
+            duplicate.lifting = original.lifting || 0;
+            duplicate.installation = original.installation || 0;
             duplicate.status = 'draft'; // Копия всегда черновик
 
             // Установить как текущий расчет
@@ -1707,6 +1715,11 @@
                 this.discountAmount = 0;
                 this.total = 0;
                 this.details = [];
+                // Дополнительные услуги
+                this.delivery = 0;           // Доставка (руб.)
+                this.lifting = 0;            // Подъем на этаж (руб.)
+                this.installation = 0;       // Установка (% от суммы)
+                this.installationAmount = 0; // Рассчитанная сумма установки
                 this.status = 'draft';
                 this.author = currentUser.username;
                 this.createdAt = new Date().toISOString();
@@ -1859,6 +1872,34 @@
                     html += '</div>';
                 });
 
+                // Дополнительные услуги
+                html += '<div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 4px;">';
+                html += '<h3 style="margin: 0 0 15px 0;">Дополнительные услуги</h3>';
+
+                html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">';
+
+                // Доставка
+                html += '<div>';
+                html += '<label style="display: block; margin-bottom: 5px; font-weight: bold;">Доставка (руб.):</label>';
+                html += `<input type="number" id="deliveryInput" value="${currentCalculation.delivery || 0}" onchange="updateDelivery(this.value)" style="width: 100%;" min="0" step="100">`;
+                html += '</div>';
+
+                // Подъем
+                html += '<div>';
+                html += '<label style="display: block; margin-bottom: 5px; font-weight: bold;">Подъем на этаж (руб.):</label>';
+                html += `<input type="number" id="liftingInput" value="${currentCalculation.lifting || 0}" onchange="updateLifting(this.value)" style="width: 100%;" min="0" step="100">`;
+                html += '</div>';
+
+                // Установка
+                html += '<div>';
+                html += '<label style="display: block; margin-bottom: 5px; font-weight: bold;">Установка (%):</label>';
+                html += `<input type="number" id="installationInput" value="${currentCalculation.installation || 0}" onchange="updateInstallation(this.value)" style="width: 100%;" min="0" max="100" step="1">`;
+                html += `<span style="font-size: 11px; color: #666;">Процент от суммы мебели</span>`;
+                html += '</div>';
+
+                html += '</div>';
+                html += '</div>';
+
                 // Кнопки управления
                 html += '<div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">';
                 html += '<button onclick="calculateTotal()" class="success">Рассчитать стоимость</button>';
@@ -1869,13 +1910,33 @@
                 // Результаты
                 if (currentCalculation.total > 0) {
                     html += '<div class="result-summary" style="margin-top: 20px;">';
-                    html += `<div><strong>Промежуточный итог:</strong> ${currentCalculation.subtotal.toLocaleString()} руб.</div>`;
+                    html += '<h3 style="margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #007bff;">Итоговый расчет</h3>';
+
+                    html += `<div style="margin-bottom: 10px;"><strong>Сумма компонентов и столешницы:</strong> ${currentCalculation.subtotal.toLocaleString()} руб.</div>`;
 
                     if (currentCalculation.discount > 0) {
-                        html += `<div style="color: #dc3545;"><strong>Скидка (${currentCalculation.discount}%):</strong> -${currentCalculation.discountAmount.toLocaleString()} руб.</div>`;
+                        html += `<div style="color: #dc3545; margin-bottom: 10px;"><strong>Скидка (${currentCalculation.discount}%):</strong> -${currentCalculation.discountAmount.toLocaleString()} руб.</div>`;
                     }
 
-                    html += `<div class="total">ИТОГО: ${currentCalculation.total.toLocaleString()} руб.</div>`;
+                    // Дополнительные услуги
+                    if (currentCalculation.delivery > 0 || currentCalculation.lifting > 0 || currentCalculation.installation > 0) {
+                        html += '<div style="margin: 15px 0; padding: 10px; background: #e3f2fd; border-radius: 4px;">';
+                        html += '<div style="font-weight: bold; margin-bottom: 5px;">Дополнительные услуги:</div>';
+
+                        if (currentCalculation.delivery > 0) {
+                            html += `<div>• Доставка: ${currentCalculation.delivery.toLocaleString()} руб.</div>`;
+                        }
+                        if (currentCalculation.lifting > 0) {
+                            html += `<div>• Подъем на этаж: ${currentCalculation.lifting.toLocaleString()} руб.</div>`;
+                        }
+                        if (currentCalculation.installation > 0) {
+                            html += `<div>• Установка (${currentCalculation.installation}%): ${currentCalculation.installationAmount.toLocaleString()} руб.</div>`;
+                        }
+
+                        html += '</div>';
+                    }
+
+                    html += `<div class="total">ИТОГО К ОПЛАТЕ: ${currentCalculation.total.toLocaleString()} руб.</div>`;
                     html += '<div style="margin-top: 15px;">';
                     html += '<button onclick="saveCurrentCalculation()" class="success">Сохранить расчет</button>';
                     html += '</div>';
@@ -1919,6 +1980,36 @@
             currentCalculation.countertopPrice = parseFloat(value) || 0;
             autoSave();
         }
+
+        // ========================================
+        // БЛОК 8: ДОПОЛНИТЕЛЬНЫЕ УСЛУГИ
+        // ========================================
+
+        // Обновление доставки
+        function updateDelivery(value) {
+            if (!currentCalculation) return;
+            currentCalculation.delivery = parseFloat(value) || 0;
+            autoSave();
+            console.log('Доставка обновлена:', currentCalculation.delivery);
+        }
+
+        // Обновление подъема
+        function updateLifting(value) {
+            if (!currentCalculation) return;
+            currentCalculation.lifting = parseFloat(value) || 0;
+            autoSave();
+            console.log('Подъем обновлен:', currentCalculation.lifting);
+        }
+
+        // Обновление установки
+        function updateInstallation(value) {
+            if (!currentCalculation) return;
+            currentCalculation.installation = parseFloat(value) || 0;
+            autoSave();
+            console.log('Установка обновлена:', currentCalculation.installation + '%');
+        }
+
+        // ========================================
 
         // Обновление количества компонента
         function updateComponent(componentId, value) {
@@ -2000,7 +2091,14 @@
 
             // Применение скидки
             const discountAmount = subtotal * (currentCalculation.discount / 100);
-            const total = subtotal - discountAmount;
+            let total = subtotal - discountAmount;
+
+            // Расчет дополнительных услуг
+            const installationAmount = subtotal * (currentCalculation.installation / 100);
+            currentCalculation.installationAmount = installationAmount;
+
+            // Добавление дополнительных услуг к итогу
+            total = total + currentCalculation.delivery + currentCalculation.lifting + installationAmount;
 
             currentCalculation.subtotal = subtotal;
             currentCalculation.discountAmount = discountAmount;
