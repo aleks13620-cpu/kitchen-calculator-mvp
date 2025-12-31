@@ -2598,6 +2598,44 @@
             saveClientForm();
         });
 
+        // Валидация телефона
+        function validatePhone(phone) {
+            // Пустой телефон - валиден (не обязательное поле)
+            if (!phone || phone.trim() === '') {
+                return { valid: true };
+            }
+
+            // Удаляем все символы кроме цифр для подсчета
+            const digitsOnly = phone.replace(/\D/g, '');
+
+            // Проверка: минимум 10 цифр (российский номер)
+            if (digitsOnly.length < 10) {
+                return {
+                    valid: false,
+                    error: 'Телефон должен содержать минимум 10 цифр'
+                };
+            }
+
+            // Проверка: максимум 11 цифр
+            if (digitsOnly.length > 11) {
+                return {
+                    valid: false,
+                    error: 'Телефон содержит слишком много цифр'
+                };
+            }
+
+            // Проверка: только разрешенные символы
+            const allowedPattern = /^[0-9+\-() ]+$/;
+            if (!allowedPattern.test(phone)) {
+                return {
+                    valid: false,
+                    error: 'Телефон содержит недопустимые символы'
+                };
+            }
+
+            return { valid: true };
+        }
+
         // Сохранение клиента из формы
         function saveClientForm() {
             const lastName = document.getElementById('clientLastName').value.trim();
@@ -2609,6 +2647,13 @@
 
             if (!lastName || !firstName) {
                 alert('Заполните обязательные поля: Фамилия и Имя');
+                return;
+            }
+
+            // Валидация телефона
+            const phoneValidation = validatePhone(phone);
+            if (!phoneValidation.valid) {
+                alert('Ошибка в номере телефона:\n\n' + phoneValidation.error + '\n\nПримеры правильных форматов:\n+7 (999) 123-45-67\n8 999 123 45 67\n+79991234567');
                 return;
             }
 
