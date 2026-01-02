@@ -444,6 +444,21 @@
 
                 <button onclick="showAddUserForm()">Добавить пользователя</button>
 
+                <!-- Диалог изменения пароля -->
+                <div id="changePasswordDialog" class="hidden">
+                    <h3>Изменение пароля</h3>
+                    <form id="changePasswordForm">
+                        <label>Новый пароль *</label>
+                        <input type="password" id="newPassword" required minlength="6">
+
+                        <label>Подтверждение пароля *</label>
+                        <input type="password" id="confirmPassword" required minlength="6">
+
+                        <button type="submit" class="success">Изменить пароль</button>
+                        <button type="button" onclick="hideChangePasswordDialog()" class="secondary">Отмена</button>
+                    </form>
+                </div>
+
                 <h3>Список пользователей</h3>
                 <div id="usersList"></div>
             </div>
@@ -652,13 +667,22 @@
 
         // Показать форму добавления пользователя
         function showAddUserForm() {
+            editingUserId = null;
+
             document.getElementById('userFormTitle').textContent = 'Новый пользователь';
             document.getElementById('userFormElement').reset();
             document.getElementById('userUsername').readOnly = false;
-            document.getElementById('userPasswordLabel').textContent = 'Пароль *';
-            document.getElementById('userPassword').required = true;
-            document.getElementById('userPassword').parentElement.style.display = '';
+
+            // Показать поля пароля
+            const passwordField = document.getElementById('userPassword');
+            const passwordLabel = document.getElementById('userPasswordLabel');
+            passwordLabel.style.display = '';
+            passwordLabel.textContent = 'Пароль *';
+            passwordField.style.display = '';
+            passwordField.required = true;
+
             document.getElementById('userForm').classList.remove('hidden');
+            document.getElementById('changePasswordDialog').classList.add('hidden');
 
             // Обработчик для автогенерации кода из имени
             document.getElementById('userName').addEventListener('input', function() {
@@ -668,13 +692,265 @@
                     document.getElementById('userCode').value = code;
                 }
             });
+
+            console.log('Форма создания пользователя открыта');
         }
 
         // Скрыть форму пользователя
         function hideUserForm() {
             document.getElementById('userForm').classList.add('hidden');
             document.getElementById('userFormElement').reset();
+            editingUserId = null;
         }
+
+        // Валидация логина пользователя
+        function validateUsername(username, isNew = true) {
+            if (!username || username.trim() === '') {
+                return { valid: false, error: 'Логин не может быть пустым' };
+            }
+
+            if (username.length < 3 || username.length > 20) {
+                return { valid: false, error: 'Логин должен быть от 3 до 20 символов' };
+            }
+
+            const pattern = /^[a-zA-Zа-яА-ЯёЁ0-9_]+$/;
+            if (!pattern.test(username)) {
+                return { valid: false, error: 'Логин может содержать только буквы (латиница или кириллица), цифры и _' };
+            }
+
+            if (isNew) {
+                const exists = users.find(u => u.username === username);
+                if (exists) {
+                    return { valid: false, error: 'Пользователь с таким логином уже существует' };
+                }
+            }
+
+            return { valid: true };
+        }
+
+        // Валидация пароля
+        function validateUserPassword(password) {
+            if (!password || password.trim() === '') {
+                return { valid: false, error: 'Пароль не может быть пустым' };
+            }
+
+            if (password.length < 6) {
+                return { valid: false, error: 'Пароль должен содержать минимум 6 символов' };
+            }
+
+            return { valid: true };
+        }
+
+        // Валидация кода пользователя
+        function validateUserCode(code) {
+            if (!code || code.trim() === '') {
+                return { valid: false, error: 'Код не может быть пустым' };
+            }
+
+            if (code.length !== 3) {
+                return { valid: false, error: 'Код должен содержать ровно 3 символа' };
+            }
+
+            return { valid: true };
+        }
+
+        // Переменная для отслеживания редактируемого пользователя
+        let editingUserId = null;
+
+        // Обработчик формы пользователя
+        document.getElementById('userFormElement').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveUserForm();
+        });
+
+        // Сохранение пользователя из формы
+        function saveUserForm() {
+            const username = document.getElementById('userUsername').value.trim();
+            const name = document.getElementById('userName').value.trim();
+            const role = document.getElementById('userRole').value;
+            const code = document.getElementById('userCode').value.trim().toUpperCase();
+            const password = document.getElementById('userPassword').value;
+
+            // Валидация имени
+            if (!name) {
+                alert('Заполните имя пользователя');
+                return;
+            }
+
+            // Валидация логина
+            const usernameValidation = validateUsername(username, !editingUserId);
+            if (!usernameValidation.valid) {
+                alert('Ошибка в логине:\n\n' + usernameValidation.error);
+                return;
+            }
+
+            // Валидация кода
+            const codeValidation = validateUserCode(code);
+            if (!codeValidation.valid) {
+                alert('Ошибка в коде:\n\n' + codeValidation.error);
+                return;
+            }
+
+            if (editingUserId) {
+                // Редактирование существующего пользователя
+                const user = users.find(u => u.id === editingUserId);
+                if (user) {
+                    user.name = name;
+                    user.role = role;
+                    user.code = code;
+                    user.updatedAt = new Date().toISOString();
+                    console.log('Пользователь обновлен:', user.id);
+                }
+                editingUserId = null;
+            } else {
+                // Валидация пароля (только для новых пользователей)
+                const passwordValidation = validateUserPassword(password);
+                if (!passwordValidation.valid) {
+                    alert('Ошибка в пароле:\n\n' + passwordValidation.error);
+                    return;
+                }
+
+                // Создание нового пользователя
+                const newUser = new User(username, password, role, code, name);
+                users.push(newUser);
+                console.log('Новый пользователь создан:', newUser.id);
+            }
+
+            saveUsers();
+            hideUserForm();
+            showUsersPanel();
+        }
+
+        // Редактирование пользователя
+        function editUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            editingUserId = userId;
+
+            // Заголовок с именем пользователя
+            document.getElementById('userFormTitle').textContent = `Редактирование: ${user.name} (${user.username})`;
+            document.getElementById('userUsername').value = user.username;
+            document.getElementById('userUsername').readOnly = true;
+            document.getElementById('userName').value = user.name;
+            document.getElementById('userRole').value = user.role;
+            document.getElementById('userCode').value = user.code;
+
+            // Показать поле пароля как скрытое при редактировании
+            const passwordField = document.getElementById('userPassword');
+            const passwordLabel = document.getElementById('userPasswordLabel');
+            passwordLabel.style.display = 'none';
+            passwordField.style.display = 'none';
+            passwordField.required = false;
+            passwordField.value = '';
+
+            // Показать форму
+            const formElement = document.getElementById('userForm');
+            formElement.classList.remove('hidden');
+            document.getElementById('changePasswordDialog').classList.add('hidden');
+
+            // Прокрутить к форме
+            formElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            console.log('Форма редактирования открыта для:', user.username);
+        }
+
+        // Удаление пользователя
+        function deleteUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            // Нельзя удалить самого себя
+            if (user.id === currentUser.id) {
+                alert('Вы не можете удалить свою учетную запись');
+                return;
+            }
+
+            // Нельзя удалить последнего админа
+            const adminCount = users.filter(u => u.role === 'admin').length;
+            if (user.role === 'admin' && adminCount === 1) {
+                alert('Нельзя удалить последнего администратора в системе');
+                return;
+            }
+
+            const confirmDelete = confirm(
+                `Удалить пользователя?\n\n` +
+                `Логин: ${user.username}\n` +
+                `Имя: ${user.name}\n` +
+                `Роль: ${user.role === 'admin' ? 'Администратор' : 'Менеджер'}\n\n` +
+                `Это действие необратимо!`
+            );
+
+            if (confirmDelete) {
+                const index = users.findIndex(u => u.id === userId);
+                if (index !== -1) {
+                    users.splice(index, 1);
+                    saveUsers();
+                    showUsersPanel();
+                    console.log('Пользователь удален:', userId);
+                }
+            }
+        }
+
+        // Переменная для хранения ID пользователя при смене пароля
+        let changingPasswordUserId = null;
+
+        // Показать диалог изменения пароля
+        function showChangePasswordDialog(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            changingPasswordUserId = userId;
+
+            // Обновить заголовок с именем пользователя
+            const dialogTitle = document.querySelector('#changePasswordDialog h3');
+            if (dialogTitle) {
+                dialogTitle.textContent = `Изменение пароля: ${user.name} (${user.username})`;
+            }
+
+            document.getElementById('changePasswordForm').reset();
+            document.getElementById('changePasswordDialog').classList.remove('hidden');
+            document.getElementById('userForm').classList.add('hidden');
+        }
+
+        // Скрыть диалог изменения пароля
+        function hideChangePasswordDialog() {
+            changingPasswordUserId = null;
+            document.getElementById('changePasswordDialog').classList.add('hidden');
+            document.getElementById('changePasswordForm').reset();
+        }
+
+        // Обработчик формы изменения пароля
+        document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Валидация: пароли должны совпадать
+            if (newPassword !== confirmPassword) {
+                alert('Пароли не совпадают');
+                return;
+            }
+
+            // Валидация пароля
+            const passwordValidation = validateUserPassword(newPassword);
+            if (!passwordValidation.valid) {
+                alert('Ошибка в пароле:\n\n' + passwordValidation.error);
+                return;
+            }
+
+            // Изменение пароля
+            const user = users.find(u => u.id === changingPasswordUserId);
+            if (user) {
+                user.password = newPassword;
+                user.updatedAt = new Date().toISOString();
+                saveUsers();
+                hideChangePasswordDialog();
+                alert('Пароль успешно изменен');
+                console.log('Пароль изменен для пользователя:', user.username);
+            }
+        });
 
         // ========================================
         // АВТОРИЗАЦИЯ
@@ -691,6 +967,11 @@
         // Функция входа
         function login(username, password) {
             const messageDiv = document.getElementById('loginMessage');
+
+            // Загрузить пользователей если еще не загружены
+            if (users.length === 0) {
+                loadUsers();
+            }
 
             // Найти пользователя в массиве users
             const user = users.find(u => u.username === username);
