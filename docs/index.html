@@ -1890,6 +1890,11 @@
             html += '<button onclick="exportPrices()" class="secondary">Экспорт в JSON</button>';
             html += '<button onclick="document.getElementById(\'importPricesFile\').click()" class="secondary">Импорт из JSON</button>';
             html += '<input type="file" id="importPricesFile" accept=".json" style="display:none;" onchange="importPrices(event)">';
+            html += '<br><br>';
+            html += '<button onclick="downloadPriceTemplate()" class="secondary">📥 Скачать шаблон Excel</button>';
+            html += '<button onclick="document.getElementById(\'importCsvFile\').click()" class="secondary">📤 Импорт из файла</button>';
+            html += '<input type="file" id="importCsvFile" accept=".txt,.csv" style="display:none;" onchange="importPricesFromCSV(event)">';
+            html += '<p style="color: #666; font-size: 12px; margin-top: 10px;">💡 Скачайте шаблон, откройте в Excel, заполните цены, сохраните (Ctrl+S), затем импортируйте обратно.</p>';
             html += '</div>';
 
             // Таблица цен
@@ -2119,6 +2124,82 @@
             }
         }
 
+        // Скачать CSV-шаблон для загрузки цен
+        function downloadPriceTemplate() {
+            try {
+                let rows = [];
+
+                // Заголовок
+                let header = ['ID компонента', 'Название компонента', 'Единица', 'Категория'];
+                config.facades.forEach(facade => {
+                    header.push(facade.name);
+                });
+                rows.push(header.join('\t'));
+
+                // Строки с компонентами
+                components.forEach(component => {
+                    let row = [
+                        component.id,
+                        component.name,
+                        component.unit,
+                        component.category
+                    ];
+
+                    config.facades.forEach(facade => {
+                        const price = (prices[facade.id] && prices[facade.id][component.id]) || 0;
+                        row.push(price);
+                    });
+
+                    rows.push(row.join('\t'));
+                });
+
+                rows.push('');
+
+                // Блок столешниц
+                rows.push(['ID столешницы', 'Название', 'Единица', '', 'Цена за п.м.'].join('\t'));
+
+                const ldsp28Price = countertopPrices['ldsp_28'] || 0;
+                rows.push(['ldsp_28', 'ЛДСП 28мм', 'п.м.', '', ldsp28Price].join('\t'));
+
+                const ldsp40Price = countertopPrices['ldsp_40'] || 0;
+                rows.push(['ldsp_40', 'ЛДСП 40мм', 'п.м.', '', ldsp40Price].join('\t'));
+
+                const content = rows.join('\r\n');
+
+                // Кодируем в UTF-16 LE с BOM (Excel отлично работает с этим форматом)
+                const BOM = new Uint8Array([0xFF, 0xFE]); // UTF-16 LE BOM
+                const utf16Bytes = [];
+
+                for (let i = 0; i < content.length; i++) {
+                    const code = content.charCodeAt(i);
+                    utf16Bytes.push(code & 0xFF);        // Младший байт
+                    utf16Bytes.push((code >> 8) & 0xFF); // Старший байт
+                }
+
+                // Объединяем BOM и данные
+                const fileBytes = new Uint8Array(BOM.length + utf16Bytes.length);
+                fileBytes.set(BOM, 0);
+                fileBytes.set(utf16Bytes, BOM.length);
+
+                const blob = new Blob([fileBytes], { type: 'text/plain;charset=utf-16le;' });
+                const url = URL.createObjectURL(blob);
+
+                const fileName = `price_template_${new Date().toISOString().split('T')[0]}.csv`;
+
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', fileName);
+                link.click();
+
+                URL.revokeObjectURL(url);
+
+                console.log('CSV-шаблон скачан:', fileName);
+            } catch (error) {
+                alert('Ошибка при создании шаблона: ' + error.message);
+                console.error('Ошибка создания шаблона:', error);
+            }
+        }
+
         // Импорт цен из JSON файла
         function importPrices(event) {
             const file = event.target.files[0];
@@ -2167,6 +2248,152 @@
             reader.readAsText(file);
 
             // Очистить input для возможности повторного выбора того же файла
+            event.target.value = '';
+        }
+
+        // Импорт цен из CSV файла
+        function importPricesFromCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    // Декодируем UTF-16 LE
+                    const bytes = new Uint8Array(e.target.result);
+                    let csvText = '';
+
+                    // Пропускаем BOM если есть (0xFF 0xFE)
+                    let startPos = 0;
+                    if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+                        startPos = 2;
+                    }
+
+                    // Декодируем UTF-16 LE в строку
+                    for (let i = startPos; i < bytes.length; i += 2) {
+                        if (i + 1 < bytes.length) {
+                            const code = bytes[i] | (bytes[i + 1] << 8);
+                            csvText += String.fromCharCode(code);
+                        }
+                    }
+
+                    // Разделяем по строкам (поддержка \r\n, \n, и \r)
+                    const lines = csvText.split(/\r\n|\r|\n/).filter(line => line.trim().length > 0);
+
+                    console.log('CSV импорт - всего строк:', lines.length);
+                    console.log('Первые 3 строки:', lines.slice(0, 3));
+
+                    // Парсим заголовок (используем TAB как разделитель)
+                    const headerLine = lines[0];
+                    const headers = headerLine.split('\t');
+
+                    console.log('Заголовки:', headers);
+                    console.log('Доступные фасады:', config.facades.map(f => f.name));
+
+                    // Создаем маппинг: индекс колонки -> ID фасада
+                    const facadeMap = {};
+                    for (let i = 4; i < headers.length; i++) {
+                        const facadeName = headers[i].trim();
+                        const facade = config.facades.find(f => f.name === facadeName);
+                        if (facade) {
+                            facadeMap[i] = facade.id;
+                            console.log(`Маппинг колонки ${i}: "${facadeName}" -> ${facade.id}`);
+                        } else {
+                            console.warn(`Фасад "${facadeName}" не найден в config`);
+                        }
+                    }
+
+                    console.log('Финальный facadeMap:', facadeMap);
+
+                    // Обнуляем текущие цены
+                    const newPrices = {};
+                    config.facades.forEach(f => { newPrices[f.id] = {}; });
+
+                    // Парсим строки с компонентами
+                    let importedCount = 0;
+                    for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
+                        const line = lines[lineIdx].trim();
+                        if (!line || line.startsWith('ID столешницы')) break;
+
+                        const cells = line.split('\t');
+                        const componentId = parseInt(cells[0]);
+
+                        if (isNaN(componentId) || componentId < 1 || componentId > 25) continue;
+
+                        if (componentId <= 3) {
+                            console.log(`Компонент ${componentId}, ячейки:`, cells);
+                        }
+
+                        // Импортируем цены для каждого фасада
+                        for (let colIdx = 4; colIdx < cells.length; colIdx++) {
+                            const facadeId = facadeMap[colIdx];
+                            if (facadeId) {
+                                const price = parseFloat(cells[colIdx]) || 0;
+                                newPrices[facadeId][componentId] = price;
+
+                                if (componentId <= 3 && price !== 0) {
+                                    console.log(`  Колонка ${colIdx}: фасад=${facadeId}, цена=${price}`);
+                                }
+                            }
+                        }
+                        importedCount++;
+                    }
+
+                    console.log('Импортировано компонентов:', importedCount);
+                    console.log('Пример newPrices:', Object.keys(newPrices).slice(0, 2).map(k => ({
+                        facade: k,
+                        prices: newPrices[k]
+                    })));
+
+                    // Ищем блок столешниц
+                    const newCountertopPrices = {};
+                    for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
+                        const line = lines[lineIdx].trim();
+                        if (line.startsWith('ID столешницы')) {
+                            // Следующие 2 строки - это столешницы
+                            for (let ctIdx = lineIdx + 1; ctIdx < Math.min(lineIdx + 3, lines.length); ctIdx++) {
+                                const ctLine = lines[ctIdx].trim();
+                                if (!ctLine) continue;
+
+                                const ctCells = ctLine.split('\t');
+                                const ctId = ctCells[0];
+                                const ctPrice = parseFloat(ctCells[4]) || 0;
+
+                                if (ctId === 'ldsp_28' || ctId === 'ldsp_40') {
+                                    newCountertopPrices[ctId] = ctPrice;
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    // Подтверждение импорта
+                    const confirm = window.confirm(
+                        `Импортировать цены из CSV?\n\n` +
+                        `Компонентов: ${importedCount}\n` +
+                        `Фасадов: ${Object.keys(facadeMap).length}\n` +
+                        `Столешниц: ${Object.keys(newCountertopPrices).length}\n\n` +
+                        `Текущие цены будут перезаписаны!`
+                    );
+
+                    if (confirm) {
+                        prices = newPrices;
+                        countertopPrices = Object.assign(countertopPrices, newCountertopPrices);
+
+                        savePrices();
+                        showPricesPanel();
+
+                        alert(`Цены успешно импортированы!\n\nКомпонентов: ${importedCount}, Фасадов: ${Object.keys(facadeMap).length}`);
+                        console.log('Цены импортированы из CSV');
+                    }
+                } catch (error) {
+                    alert('Ошибка при импорте CSV: ' + error.message);
+                    console.error('Ошибка импорта CSV:', error);
+                }
+            };
+            // Читаем как бинарные данные для декодирования UTF-16 LE
+            reader.readAsArrayBuffer(file);
+
             event.target.value = '';
         }
 
