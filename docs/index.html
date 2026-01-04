@@ -1221,7 +1221,7 @@
                 html += `<input type="checkbox" value="${facade.id}" ${checked}
                          onchange="toggleFacadeForComparison('${facade.id}', this.checked)"
                          style="margin-right: 8px;">`;
-                html += `${facade.name}`;
+                html += `${getFacadeName(facade.id)}`;
                 html += `</label>`;
             });
 
@@ -1238,7 +1238,7 @@
                 html += `<input type="checkbox" value="${countertop.id}" ${checked}
                          onchange="toggleCountertopForComparison('${countertop.id}', this.checked)"
                          style="margin-right: 8px;">`;
-                html += `${countertop.name}`;
+                html += `${getCountertopName(countertop.id)}`;
                 html += `</label>`;
             });
 
@@ -1307,7 +1307,7 @@
             // Заголовки столешниц
             selectedCountertopsForComparison.forEach(ctId => {
                 const ct = config.countertops.find(c => c.id === ctId);
-                html += `<th>${ct.name}</th>`;
+                html += `<th>${getCountertopName(ctId)}</th>`;
             });
 
             html += '</tr></thead><tbody>';
@@ -1315,7 +1315,7 @@
             // Строки фасадов
             selectedFacadesForComparison.forEach(facadeId => {
                 const facade = config.facades.find(f => f.id === facadeId);
-                html += `<tr><td style="font-weight: bold;">${facade.name}</td>`;
+                html += `<tr><td style="font-weight: bold;">${getFacadeName(facadeId)}</td>`;
 
                 selectedCountertopsForComparison.forEach(ctId => {
                     const price = calculateComparisonPrice(facadeId, ctId);
@@ -1388,7 +1388,7 @@
             const facade = config.facades.find(f => f.id === facadeId);
             const countertop = config.countertops.find(ct => ct.id === countertopId);
 
-            alert(`Выбрана комбинация:\n\nФасад: ${facade.name}\nСтолешница: ${countertop.name}\n\nПерейдите в раздел "Калькулятор" для завершения расчета`);
+            alert(`Выбрана комбинация:\n\nФасад: ${getFacadeName(facadeId)}\nСтолешница: ${getCountertopName(countertopId)}\n\nПерейдите в раздел "Калькулятор" для завершения расчета`);
 
             autoSave();
             console.log('Выбрана комбинация:', facadeId, countertopId);
@@ -1642,7 +1642,7 @@
                 const statusColor = calc.status === 'completed' ? '#28a745' : '#6c757d';
 
                 const facade = config.facades.find(f => f.id === calc.selectedFacade);
-                const facadeName = facade ? facade.name : 'Не выбран';
+                const facadeName = facade ? getFacadeName(calc.selectedFacade) : 'Не выбран';
 
                 html += '<div class="card" style="margin-bottom: 15px;">';
                 html += `<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">`;
@@ -1847,7 +1847,7 @@
             // ЛДСП 28мм
             const ldsp28Price = countertopPrices['ldsp_28'] || 0;
             html += '<div>';
-            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">ЛДСП 28мм (руб./п.м.):</label>';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">' + getCountertopName('ldsp_28') + ' (руб./п.м.):</label>';
             html += '<input type="number" id="countertop_ldsp_28" value="' + ldsp28Price + '" ';
             html += 'style="width: 200px;" step="0.01" min="0" placeholder="Введите цену">';
             html += '<span id="display_ldsp_28" style="margin-left: 10px; color: ' + (ldsp28Price > 0 ? '#007bff' : '#999') + '; font-weight: bold;">';
@@ -1858,7 +1858,7 @@
             // ЛДСП 40мм
             const ldsp40Price = countertopPrices['ldsp_40'] || 0;
             html += '<div>';
-            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">ЛДСП 40мм (руб./п.м.):</label>';
+            html += '<label style="font-weight: bold; display: block; margin-bottom: 5px;">' + getCountertopName('ldsp_40') + ' (руб./п.м.):</label>';
             html += '<input type="number" id="countertop_ldsp_40" value="' + ldsp40Price + '" ';
             html += 'style="width: 200px;" step="0.01" min="0" placeholder="Введите цену">';
             html += '<span id="display_ldsp_40" style="margin-left: 10px; color: ' + (ldsp40Price > 0 ? '#007bff' : '#999') + '; font-weight: bold;">';
@@ -1878,7 +1878,7 @@
 
             config.facades.forEach(facade => {
                 const selected = currentFacadeForPrices === facade.id ? 'selected' : '';
-                html += `<option value="${facade.id}" ${selected}>${facade.name}</option>`;
+                html += `<option value="${facade.id}" ${selected}>${getFacadeName(facade.id)}</option>`;
             });
 
             html += '</select>';
@@ -1899,6 +1899,64 @@
 
             // Таблица цен
             html += '<div id="pricesTable"></div>';
+
+            // ===== СЕКЦИЯ ПЕРЕИМЕНОВАНИЯ ФАСАДОВ =====
+            html += '<div style="margin-top: 40px; padding: 20px; background: #fff3cd; border-radius: 4px; border: 1px solid #ffc107;">';
+            html += '<h3 style="margin: 0 0 15px 0;">Управление названиями фасадов</h3>';
+            html += '<p style="color: #856404; font-size: 12px; margin-bottom: 15px;">Измените стандартные названия фасадов на свои. Изменения отразятся во всех разделах приложения.</p>';
+
+            html += '<div style="display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 300px; overflow-y: auto;">';
+
+            config.facades.forEach(facade => {
+                const currentName = getFacadeName(facade.id);
+                const isCustom = localStorage.getItem('customFacadeNames') &&
+                                JSON.parse(localStorage.getItem('customFacadeNames'))[facade.id];
+
+                html += '<div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 4px;">';
+                html += `<span style="width: 120px; font-size: 11px; color: #666;">${facade.id}</span>`;
+                html += `<input type="text" id="facade_name_${facade.id}" value="${currentName}"
+                         style="flex: 1; padding: 6px 10px; border: 1px solid ${isCustom ? '#28a745' : '#ddd'};"
+                         placeholder="${facade.name}">`;
+                html += `<button onclick="renameFacade('${facade.id}', document.getElementById('facade_name_${facade.id}').value)"
+                         class="secondary" style="padding: 6px 12px; font-size: 12px;">Изменить</button>`;
+                html += '</div>';
+            });
+
+            html += '</div>';
+
+            html += '<div style="margin-top: 15px;">';
+            html += '<button onclick="resetFacadeNames()" class="secondary" style="background: #dc3545; color: white;">Сбросить все названия фасадов</button>';
+            html += '</div>';
+            html += '</div>';
+
+            // ===== СЕКЦИЯ ПЕРЕИМЕНОВАНИЯ СТОЛЕШНИЦ =====
+            html += '<div style="margin-top: 20px; padding: 20px; background: #d1ecf1; border-radius: 4px; border: 1px solid #17a2b8;">';
+            html += '<h3 style="margin: 0 0 15px 0;">Управление названиями столешниц</h3>';
+            html += '<p style="color: #0c5460; font-size: 12px; margin-bottom: 15px;">Измените стандартные названия столешниц на свои.</p>';
+
+            html += '<div style="display: grid; grid-template-columns: 1fr; gap: 10px;">';
+
+            config.countertops.forEach(countertop => {
+                const currentName = getCountertopName(countertop.id);
+                const isCustom = localStorage.getItem('customCountertopNames') &&
+                                JSON.parse(localStorage.getItem('customCountertopNames'))[countertop.id];
+
+                html += '<div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 4px;">';
+                html += `<span style="width: 120px; font-size: 11px; color: #666;">${countertop.id}</span>`;
+                html += `<input type="text" id="countertop_name_${countertop.id}" value="${currentName}"
+                         style="flex: 1; padding: 6px 10px; border: 1px solid ${isCustom ? '#28a745' : '#ddd'};"
+                         placeholder="${countertop.name}">`;
+                html += `<button onclick="renameCountertop('${countertop.id}', document.getElementById('countertop_name_${countertop.id}').value)"
+                         class="secondary" style="padding: 6px 12px; font-size: 12px;">Изменить</button>`;
+                html += '</div>';
+            });
+
+            html += '</div>';
+
+            html += '<div style="margin-top: 15px;">';
+            html += '<button onclick="resetCountertopNames()" class="secondary" style="background: #dc3545; color: white;">Сбросить все названия столешниц</button>';
+            html += '</div>';
+            html += '</div>';
 
             container.innerHTML = html;
 
@@ -2070,6 +2128,92 @@
         // Проверка загрузки функции
         console.log('📌 Функция updateCountertopPrice определена:', typeof updateCountertopPrice);
 
+        // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С КАСТОМНЫМИ НАЗВАНИЯМИ =====
+
+        // Получить актуальное название фасада (кастомное или дефолтное)
+        function getFacadeName(facadeId) {
+            const customNames = JSON.parse(localStorage.getItem('customFacadeNames') || '{}');
+            if (customNames[facadeId]) {
+                return customNames[facadeId];
+            }
+            const facade = config.facades.find(f => f.id === facadeId);
+            return facade ? facade.name : facadeId;
+        }
+
+        // Получить актуальное название столешницы (кастомное или дефолтное)
+        function getCountertopName(countertopId) {
+            const customNames = JSON.parse(localStorage.getItem('customCountertopNames') || '{}');
+            if (customNames[countertopId]) {
+                return customNames[countertopId];
+            }
+            const countertop = config.countertops.find(c => c.id === countertopId);
+            return countertop ? countertop.name : countertopId;
+        }
+
+        // Переименование фасада
+        function renameFacade(facadeId, newName) {
+            try {
+                if (!newName || newName.trim() === '') {
+                    alert('Название не может быть пустым');
+                    return;
+                }
+
+                const customNames = JSON.parse(localStorage.getItem('customFacadeNames') || '{}');
+                customNames[facadeId] = newName.trim();
+                localStorage.setItem('customFacadeNames', JSON.stringify(customNames));
+
+                console.log(`Фасад ${facadeId} переименован в "${newName}"`);
+                showPricesPanel(); // Обновить UI
+                alert(`Фасад успешно переименован в "${newName}"`);
+            } catch (error) {
+                alert('Ошибка при переименовании: ' + error.message);
+                console.error('Ошибка переименования фасада:', error);
+            }
+        }
+
+        // Переименование столешницы
+        function renameCountertop(countertopId, newName) {
+            try {
+                if (!newName || newName.trim() === '') {
+                    alert('Название не может быть пустым');
+                    return;
+                }
+
+                const customNames = JSON.parse(localStorage.getItem('customCountertopNames') || '{}');
+                customNames[countertopId] = newName.trim();
+                localStorage.setItem('customCountertopNames', JSON.stringify(customNames));
+
+                console.log(`Столешница ${countertopId} переименована в "${newName}"`);
+                showPricesPanel(); // Обновить UI
+                alert(`Столешница успешно переименована в "${newName}"`);
+            } catch (error) {
+                alert('Ошибка при переименовании: ' + error.message);
+                console.error('Ошибка переименования столешницы:', error);
+            }
+        }
+
+        // Сброс всех кастомных названий фасадов
+        function resetFacadeNames() {
+            if (confirm('Вы уверены, что хотите сбросить все названия фасадов к стандартным?')) {
+                localStorage.removeItem('customFacadeNames');
+                console.log('Все названия фасадов сброшены');
+                showPricesPanel(); // Обновить UI
+                alert('Названия фасадов сброшены к стандартным');
+            }
+        }
+
+        // Сброс всех кастомных названий столешниц
+        function resetCountertopNames() {
+            if (confirm('Вы уверены, что хотите сбросить все названия столешниц к стандартным?')) {
+                localStorage.removeItem('customCountertopNames');
+                console.log('Все названия столешниц сброшены');
+                showPricesPanel(); // Обновить UI
+                alert('Названия столешниц сброшены к стандартным');
+            }
+        }
+
+        // ===== УПРАВЛЕНИЕ ЦЕНАМИ =====
+
         // Сохранение всех цен в localStorage
         function savePrices() {
             try {
@@ -2132,7 +2276,7 @@
                 // Заголовок
                 let header = ['ID компонента', 'Название компонента', 'Единица', 'Категория'];
                 config.facades.forEach(facade => {
-                    header.push(facade.name);
+                    header.push(getFacadeName(facade.id));
                 });
                 rows.push(header.join('\t'));
 
@@ -2159,10 +2303,10 @@
                 rows.push(['ID столешницы', 'Название', 'Единица', '', 'Цена за п.м.'].join('\t'));
 
                 const ldsp28Price = countertopPrices['ldsp_28'] || 0;
-                rows.push(['ldsp_28', 'ЛДСП 28мм', 'п.м.', '', ldsp28Price].join('\t'));
+                rows.push(['ldsp_28', getCountertopName('ldsp_28'), 'п.м.', '', ldsp28Price].join('\t'));
 
                 const ldsp40Price = countertopPrices['ldsp_40'] || 0;
-                rows.push(['ldsp_40', 'ЛДСП 40мм', 'п.м.', '', ldsp40Price].join('\t'));
+                rows.push(['ldsp_40', getCountertopName('ldsp_40'), 'п.м.', '', ldsp40Price].join('\t'));
 
                 const content = rows.join('\r\n');
 
@@ -2485,7 +2629,7 @@
 
             config.facades.forEach(facade => {
                 const selected = currentCalculation.selectedFacade === facade.id ? 'selected' : '';
-                html += `<option value="${facade.id}" ${selected}>${facade.name}</option>`;
+                html += `<option value="${facade.id}" ${selected}>${getFacadeName(facade.id)}</option>`;
             });
 
             html += '</select>';
@@ -2515,7 +2659,7 @@
 
             config.countertops.forEach(countertop => {
                 const selected = currentCalculation.selectedCountertop === countertop.id ? 'selected' : '';
-                html += `<option value="${countertop.id}" ${selected}>${countertop.name}</option>`;
+                html += `<option value="${countertop.id}" ${selected}>${getCountertopName(countertop.id)}</option>`;
             });
 
             html += '</select>';
@@ -2781,7 +2925,7 @@
                     if (countertopTotal > 0) {
                         subtotal += countertopTotal;
                         details.push({
-                            component: `Столешница: ${countertop.name}`,
+                            component: `Столешница: ${getCountertopName(countertop.id)}`,
                             quantity: countertop.type === 'auto' ? currentCalculation.countertopMeters : 1,
                             unit: countertop.type === 'auto' ? 'п.м.' : 'шт.',
                             price: countertop.type === 'auto' ? countertopPricePerMeter : countertopTotal,
@@ -3035,13 +3179,13 @@
             // Фасад и столешница
             const facade = config.facades.find(f => f.id === calc.selectedFacade);
             if (facade) {
-                csv.push(['Тип фасада:', facade.name]);
+                csv.push(['Тип фасада:', getFacadeName(calc.selectedFacade)]);
             }
 
             if (calc.selectedCountertop) {
                 const countertop = config.countertops.find(ct => ct.id === calc.selectedCountertop);
                 if (countertop) {
-                    csv.push(['Столешница:', countertop.name]);
+                    csv.push(['Столешница:', getCountertopName(calc.selectedCountertop)]);
                     if (calc.countertopMeters > 0) {
                         csv.push(['Метров столешницы:', calc.countertopMeters]);
                     }
@@ -3216,7 +3360,7 @@
                 // Заголовки столешниц
                 selectedCountertopsForComparison.forEach(ctId => {
                     const ct = config.countertops.find(c => c.id === ctId);
-                    html += `<th>${ct.name}</th>`;
+                    html += `<th>${getCountertopName(ctId)}</th>`;
                 });
 
                 html += '</tr></thead><tbody>';
@@ -3224,7 +3368,7 @@
                 // Строки фасадов
                 selectedFacadesForComparison.forEach(facadeId => {
                     const facade = config.facades.find(f => f.id === facadeId);
-                    html += `<tr><td><strong>${facade.name}</strong></td>`;
+                    html += `<tr><td><strong>${getFacadeName(facadeId)}</strong></td>`;
 
                     selectedCountertopsForComparison.forEach(ctId => {
                         const price = calculateComparisonPrice(facadeId, ctId);
